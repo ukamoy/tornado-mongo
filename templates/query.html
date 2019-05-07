@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block head %}
+<title>{{ title }}</title>
+<link href="{{static_url("css/input.css")}}" rel="stylesheet">
+
+{% end %}
+{% block body %}
+{%if item%}
+RESULT: {{item}}
+{%else%}
+<form action="/query_order" method="post"  class="form-signin">
+<h2 class="form-signin-heading">Query Missing Order</h2>
+account  : OKEX_<input type="text" name="ac_name"><br><br>
+symbol   : <input type="text" name="symbol"><br><br>
+oid | id : <input type="text" name="oid"><br><br>
+<button type="submit" class="btn btn-sm btn-primary">Look Up</button>
+</form>
+{% end %}
+{% end %}
