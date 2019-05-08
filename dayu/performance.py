@@ -6,8 +6,7 @@ import json
 import requests
 
 REST_HOST = "https://www.okex.com"
-# MONGO_URI = "mongodb://dayu:Xinger520@localhost:27017/dayu-orders"
-MONGO_URI = "mongodb://192.168.0.104:27017"
+MONGO_URI = "mongodb://dayu:Xinger520@localhost:27017/dayu-orders"
 DB_NAME = "dayu-orders"
 ATT_PATH = f"{os.getcwd()}/tmp"
 class position_span(object):
@@ -186,4 +185,5 @@ def get_stg_list(DB_QUERY):
         data.sort_values(by = "datetime", ascending = True, inplace=True)
         
         stg_list = list(set(data["strategy"]))
+        stg_list.sort()
     return stg_list
