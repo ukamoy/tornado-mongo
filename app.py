@@ -13,9 +13,8 @@ class MainHandler(BaseHandler):
         if current_user:
             self.redirect("/dashboard")
         else:
-            self.render("index.html", title = "DAYU SYS")
-
-class LoginHandler(BaseHandler):
+            self.render("index.html", title = "DAYU SYS", msg=None)
+    
     def post(self):
         post_values = ['name','pwd']
         args = {}
@@ -32,7 +31,7 @@ class LoginHandler(BaseHandler):
                             expires_days = 15)
             self.redirect("/dashboard")
         except:
-            pass
+            self.render("index.html", title = "DAYU SYS", msg = f"user {args['name']} not exists")
 
 class dashboard(BaseHandler):
     @tornado.web.authenticated
@@ -42,9 +41,9 @@ class dashboard(BaseHandler):
 class strategy_performance(BaseHandler):
     @tornado.web.authenticated
     def get(self):
-        # query = {"state":"2"}
-        # stg_list = get_stg_list(query)
-        self.render("performance.html", title = "DAYU", items={})
+        query = {"state":{"$in":["-1","2"]}}
+        stg_list = get_stg_list(query)
+        self.render("performance.html", title = "DAYU", items=stg_list)
     
     def post(self):
         strategy=self.get_argument("strategy_name")
@@ -53,6 +52,7 @@ class strategy_performance(BaseHandler):
             result = run(db_query)
         except:
             result = "STARTEGY NAME ERROR"
+        print(result)
         if result:
             self.render("performance.html", title = strategy, items = result)
         else:
@@ -89,11 +89,10 @@ settings = {
 
 application = tornado.web.Application([
     (r"/", MainHandler), 
-    (r"/login", LoginHandler), 
     (r"/dashboard", dashboard), 
     (r"/deploy", deploy),
     (r"/query_order", query_order),
-    (r"/strategy_performance", strategy_performance),
+    (r"/strategy_performance/?", strategy_performance),
 ],**settings)
 
 if __name__ == "__main__":

@@ -1,12 +1,11 @@
 import tornado.web
-# from vanellope import da
 from config import db
 from dayu.util.user import Member
 
 class BaseHandler(tornado.web.RequestHandler):
     def get_current_user(self):
         # For read only
-        print("co:",self.get_cookie("auth"))
+        print("cookie:",self.get_cookie("auth"))
         member = db.user.find_one({"auth": self.get_cookie('auth')})
         if member:
             return self._member_db_map(member)

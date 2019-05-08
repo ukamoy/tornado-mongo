@@ -4,8 +4,17 @@
 <link href="/static/css/signin.css" rel="stylesheet">
 {% end %}
 {% block body %}
-<form class="form-signin" action="/login" method="post">
+
+<form class="form-signin" action="/" method="post">
     <h2 class="form-signin-heading">Please sign in</h2>
+    
+    {% if msg %}
+      <br>
+      <div class="alert alert-danger" role="alert">
+        <strong>{{msg}}</strong>
+      </div>
+    {% end %}
+
     <label for="name" class="sr-only">Email address</label>
     <input type="text" name="name" class="form-control" placeholder="Email address" required autofocus>
     <label for="inputPassword" class="sr-only">Password</label>

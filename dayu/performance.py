@@ -6,7 +6,8 @@ import json
 import requests
 
 REST_HOST = "https://www.okex.com"
-MONGO_URI = "mongodb://dayu:Xinger520@localhost:27017/dayu-orders"
+# MONGO_URI = "mongodb://dayu:Xinger520@localhost:27017/dayu-orders"
+MONGO_URI = "mongodb://192.168.0.104:27017"
 DB_NAME = "dayu-orders"
 ATT_PATH = f"{os.getcwd()}/tmp"
 class position_span(object):

@@ -107,7 +107,6 @@ class Member:
 
     # Required Properties
     def set_name(self, _name):
-        print("setname",_name)
         self._model['uid'] = db.user.count() + 1
         if not _name:
             raise exception.NameError
@@ -207,13 +206,12 @@ class Member:
 
     def _encrypt_password(self, _pwd):
         # Unified password encryption algorithm
-        print(hashlib.sha256(_pwd.encode('utf-8')).hexdigest())
         return hashlib.sha256(_pwd.encode('utf-8')).hexdigest()
 
     def _set_auth(self):
         if self._model['name'] and self._model['pwd']:
-            self._model['auth'] = hashlib.sha256(self._model['name'] + 
-                                  self._model['pwd']).hexdigest()
+            self._model['auth'] = hashlib.sha256((self._model['name'] + 
+                                  self._model['pwd']).encode('utf-8')).hexdigest()
 
     def reload(self, _name, _pwd):
         """
@@ -223,26 +221,19 @@ class Member:
         More about AuthError exception see  'vanellope/exception.py'.
         """
         # Use (name, pwd) pair or auth cookie to reload
-        print("reload",_name,_pwd)
         if not _name:
-            print("noname")
             raise exception.NameError
         elif not _pwd:
-            print("nopwd")
             raise exception.AuthError()
         else:
             entity = db.user.find_one({"name": _name})
-            print("find_user",entity)
             print("passssssssss",self._encrypt_password(_pwd))
             # Pymongo return None value if not match one
             if not entity:
-                print("no entity")
                 raise exception.AuthError()
             elif entity['pwd'] != self._encrypt_password(_pwd):
-                print("??????")
                 raise exception.AuthError()
             else:
-                print("match")
                 self._model = entity
 
     def put(self):

@@ -9,14 +9,17 @@
    </script>
 {% end %}
 {% block body %}
-   {%if not items%}
-   <form action="/strategy_performance" method="post" class="form-signin">
-      <h3 class="form-signin-heading">Query Strategy Performance</h3>
-      <label for="inputstrategy" class="sr-only">strategy name</label>
-      <input type="text" name="strategy_name" class="form-control" placeholder="strategy name" required autofocus>
-   <button type="submit" class="btn btn-sm btn-primary btn-block">Look Up</button><br>
-   </form>
-   {%else%}
+   {%if isinstance(items, list)%}
+      <form action="/strategy_performance" method="post" class="form-signin">
+         <h3 class="form-signin-heading">Query Strategy Performance</h3>
+         {% for stg in items %}
+         <button type="submit" class="btn btn-sm btn-primary btn-block" name = "strategy_name" value={{stg}}>{{stg}}</button><br>
+         {% end %}
+         <!-- <label for="inputstrategy" class="sr-only">strategy name</label>
+         <input type="text" name="strategy_name" class="form-control" placeholder="strategy name" required autofocus>
+      <button type="submit" class="btn btn-sm btn-primary btn-block">Look Up</button><br> -->
+      </form>
+   {%elif isinstance(items, dict)%}
       <ul>
       {% for strategy, item in items.items() %}
          <br>
