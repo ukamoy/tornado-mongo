@@ -70,6 +70,8 @@ def process_orders(order_data, pos_dict):
     for idx, order in order_data.iterrows():
         order_price = float(order['price_avg'])
         order_qty = float(order['filled_qty'])
+        if not order_qty:
+            continue
 
         pos_dict.contract_value = int(order['contract_val'])
         pos_dict.account = order['account']
@@ -158,13 +160,14 @@ def run(DB_QUERY):
 
         strategy = DB_QUERY["strategy"]
         result[strategy] ={}
-
-        instruments = list(set(data["instrument_id"]))
+        data["vtSymbol"] = data["instrument_id"]+":"+data["account"]
+        instruments = list(set(data["vtSymbol"]))
         for instrument in instruments:
-            per_coin_data = data[data["instrument_id"] == instrument]
+            sym = instrument.split(":")[0]
+            per_coin_data = data[data["instrument_id"] == sym]
             pos_dict = position_span(instrument)
             process_orders(per_coin_data, pos_dict)
-            pos_dict.calculate_position_profit(price_dict[instrument])
+            pos_dict.calculate_position_profit(price_dict[sym])
 
             # 缓存策略统计
             result[strategy][instrument] = pos_dict

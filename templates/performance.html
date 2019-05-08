@@ -19,6 +19,7 @@
    {%else%}
       <ul>
       {% for strategy, item in items.items() %}
+         <br>
          {{item["symbol"]}}
          <li>trade_count: {{item["trade_count"] }}</li>
          <li>profit_loss: {{item["profit_loss"] }}</li>

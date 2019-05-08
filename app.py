@@ -13,12 +13,12 @@ class MainHandler(tornado.web.RequestHandler):
 
 class strategy_performance(tornado.web.RequestHandler):
     def get(self):
-        # query = {"status":"2"}
+        # query = {"state":"2"}
         # stg_list = get_stg_list(query)
         self.render("performance.html", title = "DAYU", items={})
     def post(self):
         strategy=self.get_argument("strategy_name")
-        db_query = {"strategy":strategy,"status":"2"}
+        db_query = {"strategy":strategy,"state":{"$in":["-1","2"]}}
         try:
             result = run(db_query)
         except:
