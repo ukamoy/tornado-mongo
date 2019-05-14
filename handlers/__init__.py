@@ -1,12 +1,14 @@
 import tornado.web
-from config import db
+from dayu.util.db_conn import db_client
 from dayu.util.user import Member
 
 class BaseHandler(tornado.web.RequestHandler):
+    def initialize(self):
+        self.db_client = db_client()
     def get_current_user(self):
         # For read only
-        print("cookie:",self.get_cookie("auth"))
-        member = db.user.find_one({"auth": self.get_cookie('auth')})
+        print("cookie:", self.get_cookie("auth"))
+        member = self.db_client.query_one("user", {"auth": self.get_cookie('auth')})
         if member:
             return self._member_db_map(member)
         else:
@@ -15,24 +17,24 @@ class BaseHandler(tornado.web.RequestHandler):
     def get_user(self, uid=None, name=None):
         print(uid,name)
         if uid:
-            return self._member_db_map(db.user.find_one({"uid":int(uid)}))
+            return self._member_db_map(self.db_client.query_one("user",{"uid":int(uid)}))
         elif name:
-            return self._member_db_map(db.user.find_one({"name": name}))
+            return self._member_db_map(self.db_client.query_one("user",{"name": name}))
         else: 
             return {}
 
     def current_user_entity(self):
         # For write
-        return Member(db.user.find_one({"auth": self.get_cookie('auth')}))
+        return Member(self.db_client.query_one("user",{"auth": self.get_cookie('auth')}))
 
     def user_entity(self, uid=None, name=None):
         if uid:
-            return Member(db.user.find_one({"uid":int(uid)}))
+            return Member(self.db_client.query_one("user",{"uid":int(uid)}))
         elif name:
-            return Member(db.user.find_one({"name": name}))
+            return Member(self.db_client.query_one("user",{"name": name}))
 
     def member(self, uid):
-        return self._member_db_map(db.user.find_one({"uid": int(uid)}))
+        return self._member_db_map(self.db_client.query_one("user",{"uid": int(uid)}))
         
     def is_ajax(self):
         return "X-Requested-With" in self.request.headers and \
@@ -45,17 +47,15 @@ class BaseHandler(tornado.web.RequestHandler):
                 uid = db['uid'],
                 name = db['name'],
                 email = db['email'],
-                color = db['color'],            
+                waitlist = db['waitlist'],            
                 brief = db['brief'],
                 like = db['like'],
                 avatar = db['avatar'],
                 avatar_large = db['avatar_large'],
                 # messages = da.unread_messages(db['uid']),
                 verified = db['verified'],
-                contacter = db['contacter']
+                contacter = db['contacter'],
+                group = db['group']
             )
         except TypeError:
             return {}
-
-
-

@@ -1,6 +1,10 @@
-import pymongo
-dbURI = "mongodb://192.168.0.104:27017"
+dbURI = "mongodb://localhost:27017"
 dbname = "dayu-deploy"
-db=pymongo.MongoClient(dbURI)[dbname]
 
 HOSTNAME = "localhost"
+
+dingding_token = "" 
+USER_HOME = "/home/user"
+stg_folder = ""
+apikey_path = ""
+working_path =  ""

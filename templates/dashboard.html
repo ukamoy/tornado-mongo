@@ -1,8 +1,53 @@
 {% extends "base.html" %}
 {% block head %}
-<title>{{ title }}</title>
-<link href="/static/css/input.css" rel="stylesheet">
+<link rel="stylesheet" type="text/css" href="{{static_url("css/dashboard.css")}}" rel="stylesheet">
+<!-- <link rel="stylesheet" type="text/css" href="{{static_url("css/DT_bootstrap.css")}}" rel="stylesheet"> -->
+<script type="text/javascript" language="javascript" src="{{static_url("js/dashboard.js")}}"></script>
+<!-- <script type="text/javascript" language="javascript" src="{{static_url("js/DT_bootstrap.js")}}"></script> -->
 {% end %}
 {% block body %}
-not today, goto <a href="/strategy_performance">strategy_performance</a>
+<div class="pageContainer">
+    {% include "admin_nav.html" %}
+
+    <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">    
+        <h2 class="sub-header">Strategy List</h2>
+        <form action="/dashboard/waitlist" method="post" id="form">
+        <div class="table-responsive" style="margin-top: 10px">
+            <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="strategy_list">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" class="checkall" name="checkall"></th>
+                        <th style="display:none;">id</th>
+                        <th>Folder Name</th>
+                        <th>Symbols</th>
+                        <th>Account</th>
+                        <th>Strategy Setting</th>
+                        <th>Status</th>
+                        <th>Create Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in data %}
+                    <tr class="odd gradeX">
+                        <td><input type="checkbox" value = {{d["_id"]}} name = "cc"></td>
+                        <td style="display:none;">{{d["_id"]}}</td>
+                        <td><a href = "/dashboard/edit_strategy/{{d["_id"]}}">{{d["strategy_git_folder"]}}</a></td>
+                        <td>{{d["symbols"]}}</td>
+                        <td>{{d["account_name"]}}</td>
+                        <td class="center">read</td>
+                        <td class="center">{{d["status"]}}</td>
+                        <td class="center">{{d["createdate"]}}</td>
+                    </tr>
+                    {% end %}
+                </tbody>
+            </table>
+        </div>
+        <div class = "row">
+            <input type="hidden" value="" id = "hidTD" name = "strategy_ids">
+            <input type="button" class="btn btn-sm btn-primary" name = "update_waitlist" value="Add to WaitList">
+        </div>
+    </form>
+    </div>
+</div>
+
 {% end %}

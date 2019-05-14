@@ -1,31 +1,20 @@
-#! /usr/bin/env python
-# coding=utf-8
-
 import re
 import time
 import hashlib
 import urllib
 import datetime
 import smtplib
-import string
-import random
 import json
-from config import HOSTNAME,db
-import logging
-
-import tornado.web
+from config import HOSTNAME
+from dayu.util.db_conn import db_client
 
 # import Mail
 from dayu.util import regex
 from dayu.util import constant
 from dayu.util import exception 
 
-"""Database Schema
-"""
-
 class Member:
     """A wrapper.
-
     set_name() takes a string as argument. ValueError exception raised if the 
     string's boolean value if False. PatternMatchError exception is raised 
     if the string did not match the regex pattern. AuthError exception is 
@@ -37,7 +26,6 @@ class Member:
             'name': None,
             'email': None,
             'pwd': None, 
-            "color": None,
             'auth': None,
             'date': datetime.datetime.utcnow(),
             'avatar': None,
@@ -46,10 +34,13 @@ class Member:
             'like': [],
             'verified': False,
             'contacter':[],
+            "wishlist": []
         }
         
         if entity and isinstance(entity, dict):
             self._model = entity
+
+        self.db_client = db_client()
 
     # Is is NECESSARY ???????
     def __getitem__(self, item):
@@ -71,8 +62,8 @@ class Member:
         return self._model['email']
 
     @property 
-    def color(self):
-        return self._model['color']
+    def wish_list(self):
+        return self._model['wish_list']
 
     @property 
     def brief(self):
@@ -107,22 +98,16 @@ class Member:
 
     # Required Properties
     def set_name(self, _name):
-        self._model['uid'] = db.user.count() + 1
+        self._model['uid'] = self.db_client.count("user") + 1
         if not _name:
             raise exception.NameError
         elif re.match(regex.UNAME, _name):
-            if db.user.find_one({"name": _name}):
+            if self.db_client.query_one("user",{"name": _name}):
                 raise exception.DupKeyError()
             else:
                 self._model['name'] = _name
                 self._model['name_safe'] = _name.lower()
                 self._set_auth()
-        else:
-            raise exception.PatternMatchError()
-
-    def set_color(self, color):
-        if re.match(regex.COLOR, color):
-            self._model['color'] = color
         else:
             raise exception.PatternMatchError()
 
@@ -150,7 +135,7 @@ class Member:
         if _email is None:
             raise ValueError
         elif re.match(regex.EMAIL, _email.lower()):
-            if db.user.find_one({"email": _email.lower()}):
+            if self.db_client.query_one("user",{"email": _email.lower()}):
                 raise exception.DupKeyError()
             else:
                 self._model['email'] = _email.lower() 
@@ -226,251 +211,20 @@ class Member:
         elif not _pwd:
             raise exception.AuthError()
         else:
-            entity = db.user.find_one({"name": _name})
-            print("passssssssss",self._encrypt_password(_pwd))
+            entity = self.db_client.query_one("user",{"name": _name})
+            print("passssssssssed",self._encrypt_password(_pwd))
             # Pymongo return None value if not match one
             if not entity:
+                print("no entity")
                 raise exception.AuthError()
             elif entity['pwd'] != self._encrypt_password(_pwd):
+                print("AuthError")
                 raise exception.AuthError()
             else:
+                print("ok")
                 self._model = entity
 
     def put(self):
         self._model['avatar'] = self.gravatar(self._model['email'])
         self._model['avatar_large'] = self.gravatar(self._model['email'], size=128)
-        db.user.save(self._model)
-
-
-
-
-
-
-class Comment:
-    def __init__(self, entity=None):
-        self._model = {
-           'cid': None, 
-           'date': datetime.datetime.utcnow(),
-           'article': None,
-           'body': None,
-           'member': None,
-        }
-        if entity and isinstance(entity, dict):
-            self._model = entity
-
-    @property 
-    def cid(self):
-        return self._model['cid']
-
-    @property 
-    def member(self):
-        return self._model['member']
-
-    @property 
-    def body(self):
-        return self._model['body']
-
-    @property 
-    def date(self):
-        return self._model['date']
-
-    def set_article(self, _sn):
-        self._model['article'] = int(_sn)
-        self._model['cid'] = db.comment.find({"article":int(_sn)}).count() + 1
-
-    def set_body(self, _body):
-        self._model['body'] = _body
-
-
-    def set_commenter(self, _uid):
-        self._model['member'] = _uid
-
-    def put(self):
-        db.comment.save(self._model)
-
-
-
-class Article:
-    def __init__(self, entity=None):
-        self._model = {
-            'sn': None, # article numeric id
-            'status': constant.NORMAL, # 'deleted', 'normal',
-            'author': None, #
-            'heat': 0,
-            'title': None,
-            'sub_title': None,
-            'markdown': None,
-            'html': None,
-            'date': datetime.datetime.utcnow(),
-            'review': datetime.datetime.utcnow(),
-        }
-
-        if entity and isinstance(entity, dict):
-            self._model = entity
-
-    @property 
-    def status(self):
-        return self._model['status']
-
-    @property 
-    def sn(self):
-        # Whatever it calls, sn refer to the numeric id.
-        return self._model['sn']
-
-    @property 
-    def author(self):
-        return self._model['author']
-
-    @property 
-    def title(self):
-        return self._model['title']
-
-    @property 
-    def sub_title(self):
-        return self._model['sub_title']
-
-    @property 
-    def html(self):
-        return self._model['html']
-
-    @property 
-    def markdown(self):
-        return self._model['markdown']
-
-    @property 
-    def date(self):
-        return self._model['date']
-
-    @property 
-    def review(self):
-        return self._model['review']
-
-    @property 
-    def heat(self):
-        return self._model['heat']
-
-    def set_sn(self):
-        if db.article.count() == 0:
-            self._model['sn'] = 0;
-        else:
-            self._model['sn'] = db.article.find().sort("sn", -1)[0]['sn'] + 1
-
-    def set_title(self, _title):
-        self._model['title'] = _title
-
-    def set_sub_title(self, _sub_title):
-        self._model['sub_title'] = _sub_title
-
-    def set_markdown(self, _md):
-        self._model['markdown'] = _md
-
-    def set_html(self, _html):
-        self._model['html'] = _html
-
-    def set_status(self, _status):
-        self._model['status'] = _status
-
-    # as long as the _identifier is unique
-    def set_author(self, _identifier):
-        self._model['author'] = _identifier
-
-    def set_review(self):
-        self._model['review'] = datetime.datetime.utcnow()
-
-    def remove(self):
-        db.article.remove({"sn": self._model['sn']})
-
-    # save instance to database
-    def put(self):
-        db.article.save(self._model)
-
-
-
-class Message:
-    def __init__(self, entity=None):
-        self._model = {
-            "mid": None, #mid只能用来标识确定两个用户之间的信息
-            "uid": None, # Unique among all messages
-            "sender": None, 
-            "receiver": None,
-            "reject": False,
-            "status": constant.UNREAD,
-            "date": datetime.datetime.utcnow(),
-            "body": None,
-            "peer": [], # the two contacters' uid.
-        }
-
-        if entity:
-            self._model = entity
-
-    # Access like attribute
-    
-    @property 
-    def mid(self):
-        return self._model['mid']
-
-    @property 
-    def sender(self):
-        return self._model['sender']
-
-    @property 
-    def receiver(self):
-        return self._model['receiver']
-
-    @property 
-    def reject(self):
-        return self._model['reject']
-
-    @property 
-    def status(self):
-        return self._model['status']
-
-    @property 
-    def date(self):
-        return self._model['date']
-
-    @property 
-    def body(self):
-        return self._model['body']
-
-    @property 
-    def peer(self):
-        return self._model['peer']
-        
-
-
-    # Utilities
-    def set_sender(self, sender_id):
-        if not isinstance(sender_id, int): # invalid argument
-            raise TypeError
-        else:
-            self._model['sender'] = sender_id
-            self._model['peer'].append(sender_id)
-
-    def set_receiver(self, receiver_id):
-        if not isinstance(receiver_id, int): # invalid argument
-            raise TypeError
-        else:
-            self._model['receiver'] = receiver_id
-            self._model['peer'].append(receiver_id)
-
-    def set_body(self, msg):
-        if not msg: # content empty
-            raise ValueError
-        else:
-            self._model['body'] = msg
-
-    def set_reject(self):
-        self._model['reject'] = True
-
-
-    def put(self):
-        t = db.message.find({"sender": self._model['sender'],
-                             "receiver": self._model['receiver']}).count()
-        self._model['mid'] = t + 1
-        self._model['uid'] = int(time.time())
-        db.message.save(self._model)
-
-    def drop(self):
-        db.message.remove({"uid": self._model['uid']})
-
+        self.db_client.save("user",self._model)

@@ -85,13 +85,13 @@ def process_orders(order_data, pos_dict):
         
         elif str(order['type']) == "3":
             if pos_dict.long_qty < int(order_qty):
-                pos_dict.missing_open += f"{order['datetime']}, hold_long:{pos_dict.long_qty} vs. sell_qty:{order_qty}\n"
+                pos_dict.missing_open += f"<p>{order['datetime']}, hold_long:{pos_dict.long_qty} vs. sell_qty:{order_qty}</p>\n\n"
                 continue
             pos_dict.sell_long_holding(order_price, order_qty)
         
         elif str(order['type']) == "4":
             if pos_dict.short_qty < int(order_qty):
-                pos_dict.missing_open += f"{order['datetime']}, hold_short:{pos_dict.short_qty} vs. cover_qty:{order_qty}\n"
+                pos_dict.missing_open += f"<p>{order['datetime']}, hold_short:{pos_dict.short_qty} vs. cover_qty:{order_qty}</p>\n\n"
                 continue
             pos_dict.cover_short_holding(order_price, order_qty)
         
@@ -182,7 +182,7 @@ def get_stg_list(DB_QUERY):
     stg_list = []
     if df.size > 0:
         data = df[["datetime","account","strategy","instrument_id","filled_qty","price_avg","fee","type","contract_val","order_type"]]
-        data.sort_values(by = "datetime", ascending = True, inplace=True)
+        data = data.sort_values(by = "datetime", ascending = True)
         
         stg_list = list(set(data["strategy"]))
         stg_list.sort()

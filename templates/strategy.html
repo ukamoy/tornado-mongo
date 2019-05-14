@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block head %}
+<title>{{ title }}</title>
+<link rel="stylesheet" type="text/css" href="{{static_url("css/dashboard.css")}}" rel="stylesheet">
+<link href="{{static_url("css/table.css")}}" rel="stylesheet">
+
+{% end %}
+{% block body %}
+<div class="container-fluid">
+    {% include "admin_nav.html" %}
+
+    <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+        <div style="margin-top: 10px">
+            <form class="stdform stdform2" action="/dashboard/new_strategy" method="post">
+                
+                <p>
+                    <label>Git Folder</label>
+                    <span class="field">
+                        {% if data %}
+                            <input type="text" name="strategy_git_folder" class="form-control" value="{{data['strategy_git_folder']}}" required autofocus>
+                        {% else %}
+                            <input type="text" name="strategy_git_folder" class="form-control" placeholder="Git Folder" required autofocus>
+                        {% end %}
+                    </span><!--field-->
+                </p>
+                <p>
+                    <label>Class Name</label>
+                        <span class="field">
+                        {% if data %}
+                            <input type="text" name="strategy_class_name" class="form-control" value="{{data['strategy_class_name']}}" required>
+                        {% else %}
+                            <input type="text" name="strategy_class_name" class="form-control" placeholder="Strategy Class Name" required>
+                        {% end %}
+                        </span><!--field-->
+                </p>
+                <p>
+                    <label>Symbols</label>
+                    <span class="field">
+                        {% if data %}
+                            <input type="text" name="symbols" class="form-control" value="{{data['symbols']}}" required>
+                        {% else %}
+                            <input type="text" name="symbols" class="form-control" placeholder="Symbols" required>
+                        {% end %}
+                    </span><!--field-->
+                </p>
+                <p>
+                    <label>Trade Symbols</label>
+                    <span class="field">
+                        {% if data %}
+                            <input type="text" name="trade_symbols" class="form-control" value="{{data['trade_symbols']}}" required>
+                        {% else %}
+                            <input type="text" name="trade_symbols" class="form-control" placeholder="Trade Symbols">
+                        {% end %}
+                    </span><!--field-->
+                </p>
+                <p>
+                    <label>Strategy Type</label>
+                    <span class="field">
+                        <select name="strategy_type" class="form-control" required>
+                            <option value = ""></option>
+                            {% for item in stg_type%}
+                                {% if data and item == data["strategy_type"]%}
+                                    <option value = "{{item}}" selected="selected">{{item}}</option>
+                                {%else%}
+                                    <option value = "{{item}}">{{item}}</option>
+                                {%end%}
+                            {% end %}
+                        </select>
+                    </span><!--field-->
+                </p>
+                <p>
+                <label>Account</label>
+                    <span class="field">
+                        <select name="account_name" class="form-control" required>
+                            <option value = ""></option>
+                            {% for item in account%}
+                                {% if data and item == data["account_name"]%}
+                                    <option value = "{{item}}" selected="selected">{{item}}</option>
+                                {%else%}
+                                    <option value = "{{item}}">{{item}}</option>
+                                {%end%}
+                            {% end %}
+                        </select> 
+                    </span><!--field-->
+                </p>
+                <p>
+                <label>Strategy Setting</label>
+                    <span class="field">
+                        {% if data %}
+                            <textarea class="form-control" rows="15" name="strategy_setting" value="{{data['trade_symbols']}}" ></textarea>
+                        {% else %}
+                            <textarea class="form-control" rows="15" name="strategy_setting"></textarea>
+                        {% end %}
+                    </span><!--field-->
+                </p>
+                {% if data %}
+                    <input type="hidden" id = "hidTD" name = "_id" value = "{{data['_id']}}">
+                {% end %}
+                <button class="btn btn-lg btn-primary btn-block" type="submit">Submit</button>
+            </form>
+
+        </div>
+    </div>
+</div>
+{% end %}

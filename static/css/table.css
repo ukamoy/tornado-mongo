@@ -1,0 +1,74 @@
+body {
+    padding-top: 60px;
+    padding-bottom: 60px;
+    background-color: #eee;
+  }
+  .button-layout {
+    padding-top: 30px;
+    padding-bottom: 30px;
+  }
+  .form-signin {
+    max-width: 330px;
+    padding: 15px;
+    margin: 0 auto;
+  }
+  .form-signin .form-signin-heading,
+  .form-signin .checkbox {
+    margin-bottom: 10px;
+  }
+  .form-signin .checkbox {
+    font-weight: normal;
+  }
+  .form-signin .form-control {
+    position: relative;
+    height: auto;
+    -webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
+    padding: 10px;
+    font-size: 16px;
+  }
+  .form-signin .form-control:focus {
+    z-index: 2;
+  }
+  .form-signin input[type="email"] {
+    margin-bottom: -1px;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+  .form-signin input[type="password"] {
+    margin-bottom: 10px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+  
+.stdform p, .stdform div.par { margin: 20px 0; }
+.stdform div.par { overflow: hidden; }
+.stdform span.field, .stdform div.field { margin-left: 150px; display: block; position: relative; }
+.stdform .formwrapper { display: block; padding-top: 5px; margin-left: 150px; line-height: 25px; }
+.stdform label { float: left; width: 150px; text-align: right; padding: 5px 15px 0 0; }
+
+.stdform button.cancel { background: #eee; color: #666; border: 1px solid #ddd; }
+.stdform button.cancel:hover { background: #ddd; border: 1px solid #ccc; }
+.stdform button.cancel:active { 
+  -moz-box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.7); 
+  -webkit-box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.7); 
+	box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+.stdform small.desc { font-size: 11px; color: #999; font-style: italic; 
+  display: block; margin: 5px 0 0 150px; }
+.stdform .stdformbutton { margin-left: 150px; }
+
+/*** ANOTHER FORM STYLE ***/
+.stdform2 p, .stdform2 div.par { border: 1px solid #ddd; background: #fcfcfc; margin: 0; border-top: 0; }
+.stdform2 div.terms { border: 0; background: none; }
+.stdform2 p:first-child, .stdform2 div.par:first-child { border-top: 1px solid #ddd; }
+.stdform div.par { overflow: hidden; }
+.stdform2 label { display: inline-block; padding: 20px; width: 150px; 
+  vertical-align: middle; text-align: left; font-weight: bold; }
+.stdform2 label.error { margin-left: 0; padding: 0; }
+.stdform2 label small { font-size: 11px; color: #999; display: block; 
+  font-weight: normal; line-height: 16px; }
+.stdform2 span.field, .stdform2 div.field { margin-left: 150px; display: block; 
+  background: #fff; padding: 15px; border-left: 1px solid #ddd; }
+.stdform2 .stdformbutton { margin-left: 0; padding: 20px; background: #fff; }
