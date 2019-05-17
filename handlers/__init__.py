@@ -5,6 +5,11 @@ from dayu.util.user import Member
 class BaseHandler(tornado.web.RequestHandler):
     def initialize(self):
         self.db_client = db_client()
+        
+        json_obj = self.db_client.query("account",{})
+        ac_list = list(set(map(lambda x: x["name"],json_obj)))
+        self.account_list = sorted(ac_list)
+
     def get_current_user(self):
         # For read only
         print("cookie:", self.get_cookie("auth"))

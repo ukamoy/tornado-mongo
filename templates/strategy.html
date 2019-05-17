@@ -11,17 +11,27 @@
 
     <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
         <div style="margin-top: 10px">
-            <form class="stdform stdform2" action="/dashboard/new_strategy" method="post">
+            <form class="stdform stdform2" action="/dashboard/strategy/save" method="post">
                 
                 <p>
-                    <label>Git Folder</label>
+                    <label>Git Path</label>
                     <span class="field">
                         {% if data %}
-                            <input type="text" name="strategy_git_folder" class="form-control" value="{{data['strategy_git_folder']}}" required autofocus>
+                            <input type="text" name="git_path" class="form-control" value="{{data['git_path']}}" required autofocus>
                         {% else %}
-                            <input type="text" name="strategy_git_folder" class="form-control" placeholder="Git Folder" required autofocus>
+                            <input type="text" name="git_path" class="form-control" placeholder="Git Path" required autofocus>
                         {% end %}
                     </span><!--field-->
+                </p>
+                <p>
+                    <label>Strategy Name</label>
+                        <span class="field">
+                        {% if data %}
+                            <input type="text" name="name" class="form-control" value="{{data['name']}}" required>
+                        {% else %}
+                            <input type="text" name="name" class="form-control" placeholder="Strategy Name (Max Length = 13)" required>
+                        {% end %}
+                        </span><!--field-->
                 </p>
                 <p>
                     <label>Class Name</label>
@@ -34,45 +44,15 @@
                         </span><!--field-->
                 </p>
                 <p>
-                    <label>Symbols</label>
-                    <span class="field">
-                        {% if data %}
-                            <input type="text" name="symbols" class="form-control" value="{{data['symbols']}}" required>
-                        {% else %}
-                            <input type="text" name="symbols" class="form-control" placeholder="Symbols" required>
-                        {% end %}
-                    </span><!--field-->
-                </p>
-                <p>
-                    <label>Trade Symbols</label>
+                    <label>Trade Symbol</label>
                     <span class="field">
                         {% if data %}
                             <input type="text" name="trade_symbols" class="form-control" value="{{data['trade_symbols']}}" required>
                         {% else %}
-                            <input type="text" name="trade_symbols" class="form-control" placeholder="Trade Symbols">
+                            <input type="text" name="trade_symbols" class="form-control" placeholder="Trade Symbols" required>
                         {% end %}
-                    </span><!--field-->
-                </p>
-                <p>
-                    <label>Strategy Type</label>
-                    <span class="field">
-                        <select name="strategy_type" class="form-control" required>
-                            <option value = ""></option>
-                            {% for item in stg_type%}
-                                {% if data and item == data["strategy_type"]%}
-                                    <option value = "{{item}}" selected="selected">{{item}}</option>
-                                {%else%}
-                                    <option value = "{{item}}">{{item}}</option>
-                                {%end%}
-                            {% end %}
-                        </select>
-                    </span><!--field-->
-                </p>
-                <p>
-                <label>Account</label>
-                    <span class="field">
                         <select name="account_name" class="form-control" required>
-                            <option value = ""></option>
+                            <option value = "">Choose an Account</option>
                             {% for item in account%}
                                 {% if data and item == data["account_name"]%}
                                     <option value = "{{item}}" selected="selected">{{item}}</option>
@@ -80,16 +60,26 @@
                                     <option value = "{{item}}">{{item}}</option>
                                 {%end%}
                             {% end %}
-                        </select> 
+                        </select>
+                    </span>
+                </p>
+                <p>
+                    <label>Assist Symbol</label>
+                    <span class="field">
+                        {% if data %}
+                            <input type="text" name="assist_symbols" class="form-control" value="{{data['assist_symbols']}}">
+                        {% else %}
+                            <input type="text" name="assist_symbols" class="form-control" placeholder="For Subscription Only">
+                        {% end %}
                     </span><!--field-->
                 </p>
                 <p>
                 <label>Strategy Setting</label>
                     <span class="field">
                         {% if data %}
-                            <textarea class="form-control" rows="15" name="strategy_setting" value="{{data['trade_symbols']}}" ></textarea>
+                            <textarea class="form-control" rows="15" name="strategy_setting" value="{{data['trade_symbols']}}" required>{{data["strategy_setting"]}}</textarea>
                         {% else %}
-                            <textarea class="form-control" rows="15" name="strategy_setting"></textarea>
+                            <textarea class="form-control" rows="15" name="strategy_setting" required>{}</textarea>
                         {% end %}
                     </span><!--field-->
                 </p>

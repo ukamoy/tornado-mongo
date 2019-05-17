@@ -1,134 +1,113 @@
 import os,json,shutil
 import pandas as pd
-from setting import stg_folder, apikey_path, working_path, excel_path, excel_name, sheet_name
+from config import USER_HOME, source_folder, working_path
 from datetime import datetime 
 import git
 import random
+import zipfile
 
-def read_settings():
-    data = pd.read_excel(f"{excel_path}/{excel_name}",sheet_name = sheet_name)
-    data = data[["Type","Name","Machine","Key","SymbolList","Param","Author","tradingSymbolList","LTS_Key","LTS_Param"]]
-    data.dropna(how='all',inplace = True)
-
-    os.mkdir(f"{working_path}/push")
-
-    return data
-
-def update_repo(ding):
-    repo = git.cmd.Git(stg_folder)
+def update_repo():
+    repo = git.cmd.Git(source_folder)
     repo.pull()
     a = repo.reflog()
-    ding.msg += f" - 策略代码更新至版本号: {a.split(' ')[0]} \n\n"
-    ding.msg += f"{datetime.now().strftime('%Y%m%d %H:%M:%S')}\n\n"
+    return f" - 策略代码更新至版本号: {a.split(' ')[0]} \n"
 
-def copy_to_workingfolder(stg_type, name, apikey, working_folder):
-    shutil.copytree(f"{stg_folder}/{stg_type}/{name}",f"{working_folder}")
-    #复制密钥
-    shutil.copyfile(f"{apikey_path}/OKEX_{apikey}_connect.json",f"{working_folder}/OKEX_{apikey}_connect.json")
-    #复制运行脚本
-    shutil.copyfile(f"{stg_folder}/RS_setting.json",f"{working_folder}/RS_setting.json")
+def zip_folder(startdir, file_news):
+    file_name_list = []
+    z = zipfile.ZipFile(file_news, 'w', zipfile.ZIP_DEFLATED) # 参数一：文件夹名
+    for dirpath, dirnames, filenames in os.walk(startdir):
+        fpath = dirpath.replace(startdir, '') # 这一句很重要，不replace的话，就从根目录开始复制
+        fpath = fpath and fpath + os.sep or '' # 实现当前文件夹以及包含的所有文件的压缩
+        for filename in filenames:
+            z.write(os.path.join(dirpath, filename), fpath + filename)
+        print(f'{dirpath}, 压缩成功')
+        file_name_list.append(dirnames)
+    return file_name_list[0]
 
-def modify_key_setting(working_folder, apikey, symbolList):
-    with open(f"{working_folder}/OKEX_{apikey}_connect.json") as f:
-        settings = json.load(f)
-        settings["symbols"] = symbolList
-    with open(f"{working_folder}/OKEX_{apikey}_connect.json", "w") as f:    
-        json.dump(settings, f, indent = 4)
+def cp_files(c, server_name, task_id):
+    stg_path = f"{working_path}/{task_id}/{server_name}"
+    new_stg_list = zip_folder(stg_path, f"{stg_path}.zip")
 
-def modify_cta_setting(working_folder, name, param, vtSymbols, author,trading, is_LTS = False):
-    with open(f"{working_folder}/CTA_setting.json") as f:
-        settings = json.load(f)
-        for idx, setting in enumerate(settings):
-            if "className" not in setting.keys():
-                setting['className'] = setting['classname']
+    # c.local(f"tar -czvf {zip_path} {stg_path}") # Linux
+    c.put(f"{stg_path}.zip")
 
-            setting["name"] = f"{name.replace('Strategy','')}"
-            if is_LTS:
-                setting["name"] = f"LTS{setting['name']}"
-            setting["symbolList"] = vtSymbols
+    # clean_target_strategy
+    target_folder = f"{USER_HOME}/Strategy"
+    c.run(f"rm -r {USER_HOME}/BACKUP")
+    c.run(f"mkdir {USER_HOME}/BACKUP")
+    with c.cd(target_folder):
+        # move existing stg to backup folder
+        for stg in new_stg_list:
+            if not stg:
+                continue
+            try:
+                c.run(f"mv {stg} {USER_HOME}/BACKUP")
+                print("moved:",stg)
+            except:
+                print("no exists: ",stg)
 
-            if not pd.isnull(param):
-                setting["tradingSymbolList"] = trading
-            else:
-                setting["tradingSymbolList"] = vtSymbols
+        # depress strategy
+        c.run(f"unzip {USER_HOME}/{server_name}.zip -d {target_folder}")
+        # 获取解压出来的策略名
+        t = c.run("ls")
+        stg_list = t.stdout.split('\n')
+    # 清理
+    c.run(f"rm {USER_HOME}/{server_name}.zip")
 
+    update_list = set(new_stg_list) &set(stg_list)
+    return f" - 策略 {update_list} 成功推送到了服务器 {server_name} \n\n"
+    
+    
+def prepare_stg_files(data,task_id,key_chain):
+    s = f"{working_path}/{task_id}"
+    if os.path.exists(s):
+        shutil.rmtree(s)
+
+    for stg in data:
+        tradingSymbolList = stg["trade_symbols"].replace(" ","").split(",")
+        symbolList = stg["assist_symbols"].replace(" ","").split(",")
+        symbolList.remove("")
+        symbolList+=tradingSymbolList
+        
+        ac = stg['account_name']
+        vtTradingSymbolList = list(map(lambda x: f"{x}:OKEX_{ac}", tradingSymbolList))
+        vtSymbolList = list(map(lambda x: f"{x}:OKEX_{ac}", list(set(symbolList))))
+        
+        working_folder = f"{working_path}/{task_id}/{stg['server']}/{stg['name']}"
+        # 复制工作目录
+        shutil.copytree(f"{source_folder}/{stg['git_path']}",f"{working_folder}")
+        # 复制运行脚本
+        shutil.copyfile(f"{source_folder}/RS_setting.json",f"{working_folder}/RS_setting.json")
+        
+        # 生成cta setting
+        with open(f"{working_folder}/CTA_setting.json","w") as f:
+            # 直接覆盖，不读取
+            setting = {}
+            setting["name"] = stg["name"]
+            setting["className"] = stg["strategy_class_name"]
+            setting["symbolList"] = vtSymbolList
+            setting["tradingSymbolList"] = vtTradingSymbolList
             setting["STATUS_NOTIFY_PERIOD"] = 3600
             setting["STATUS_NOTIFY_SHIFT"] = 60 * random.randint(1,40)
             setting["ENABLE_STATUS_NOTICE"] = True
-            setting["author"] = author
-            
-            if not pd.isnull(param):
-                param_list = param.split(",")
+            setting["author"] = stg["Author"]
+            setting.update(stg["strategy_setting"])
 
-                for param in param_list:
-                    p, v = param.replace(" ","").split(":")
-                    setting[p] = eval(v)
-            
-            settings[idx] = setting
+            json.dump([setting], f, indent = 4)
 
-    with open(f"{working_folder}/CTA_setting.json","w") as f:
-        json.dump(settings, f, indent = 4)
-
-def assign_settings(ding):
-    # clear working path
-    if os.path.exists(f"{working_path}/push"):
-        shutil.rmtree(f"{working_path}/push")
-
-    # 按策略读写配置
-    data = read_settings()
-    update_repo(ding)
-    updating_machine = []
-    for idx, row in data.iterrows():
-        stg_type, name, machine, apikey, symbols, param, author, trading, LTS_key, LTS_param = row.values
-        symbolList = symbols.replace(" ","").split(",")
-
-        # 复制策略文件夹到工作路径
-        working_folder = f"{working_path}/push/{machine}/{name}"
-        copy_to_workingfolder(stg_type, name, apikey, working_folder)
-
-        # 合成交易标的
-        vtSymbols = []
-        for symbol in symbolList:
-            vtSymbols.append(f"{symbol}:OKEX_{apikey}")
-        tradingsym = []
-        if not pd.isnull(trading):
-            trading_ = trading.replace(" ","").split(",")
-            for symbol in trading_:
-                tradingsym.append(f"{symbol}:OKEX_{apikey}")
-        else:
-            tradingsym = vtSymbols
-        # 修改密钥订阅
-        modify_key_setting(working_folder, apikey, symbolList)
-        # 修改cta_setting
-        modify_cta_setting(working_folder, name, param, vtSymbols, author, tradingsym)
-
-        # LTS 归集
-        if not pd.isnull(LTS_key):
-            working_folder = f"{working_path}/push/DAYU01/{name}"
-            copy_to_workingfolder(stg_type, name, LTS_key, working_folder)
-
-            vtSymbols = []
-            for symbol in symbolList:
-                vtSymbols.append(f"{symbol}:OKEX_{LTS_key}")
-
-            tradingsym = []
-            if not pd.isnull(trading):
-                trading_ = trading.replace(" ","").split(",")
-                for symbol in trading_:
-                    tradingsym.append(f"{symbol}:OKEX_{LTS_key}")
-            else:
-                tradingsym = vtSymbols
-
-            # 修改密钥订阅
-            modify_key_setting(working_folder, LTS_key, symbolList)
-            # 修改cta_setting
-            modify_cta_setting(working_folder, name, LTS_param, vtSymbols, author,tradingsym,is_LTS = True)
-
-            updating_machine.append("DAYU01")
-
-        updating_machine.append(machine)
-    return updating_machine
-            
-    # 删除下载的excel
-    shutil.copyfile(f"{excel_path}/{excel_name}", f"{working_path}/push/{excel_name}")
-    os.remove(f"{excel_path}/{excel_name}")
+        # 生成connect
+        with open(f"{working_folder}/OKEX_{ac}_connect.json","w") as f:
+            setting = {
+                "apiKey": key_chain[ac][0],
+                "apiSecret": key_chain[ac][1],
+                "passphrase": key_chain[ac][2],
+                "symbols": symbolList,
+                "future_leverage": 20,
+                "swap_leverage": 100,
+                "margin_token": 0,
+                "sessionCount": 3,
+                "setQryEnabled": True,
+                "setQryFreq": 60,
+                "trace": False,
+            }
+            json.dump(setting, f, indent = 4)

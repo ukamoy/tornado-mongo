@@ -18,11 +18,12 @@
                 <thead>
                     <tr>
                         <th style="display:none;">ids</th>
-                        <th>Folder Name</th>
+                        <th>Name</th>
+                        <th>Git Path</th>
                         <th>Symbols</th>
                         <th>Account</th>
-                        <th>CTA_setting</th>
-                        <th>Status</th>
+                        <th>Settings</th>
+                        <th>Server</th>
                         <th>Regret</th>
                     </tr>
                 </thead>
@@ -30,18 +31,19 @@
                     {% for d in data %}
                     <tr class="odd gradeX">
                         <td style="display:none;">{{d["_id"]}}</td>
-                        <td>{{d["strategy_git_folder"]}}</td>
-                        <td>{{d["symbols"]}}</td>
+                        <td>{{d["name"]}}</td>
+                        <td>{{d["git_path"]}}</td>
+                        <td>{{d["trade_symbols"]}}</td>
                         <td>{{d["account_name"]}}</td>
-                        <td class="center">read</td>
-                        <td class="center">X</td>
+                        <td>read</td>
+                        <td >{{d["server"]}}</td>
                         <td><a href="javascript:;" onclick = "remove_from_waitlist(this)">del</a></td>
                     </tr>
                     {% end %}
                 </tbody>
             </table>
         </div>
-        <input type="hidden" value="" id = "hidTD" name = "strategy_ids">
+        <input type="hidden" value="" id = "hidTD" name = "strategies">
         <input type="button" name = "confirm_task" id = "confirm" class="btn btn-sm btn-primary" value = "Confirm Submission">
     </form>
     {% else %}

@@ -26,7 +26,7 @@ class db_client(object):
     def update_one(self, collection, flt, qry):
         self.db[collection].update(flt, {"$set":qry}, upsert=True)
 
-    def update_many(self, collection, qry):
+    def update_many(self, collection, flt, qry):
         self.db[collection].update_many(flt, qry)
 
     def delete_one(self, collection, qry):

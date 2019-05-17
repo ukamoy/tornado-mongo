@@ -1,11 +1,12 @@
 $(function(){
 	// checkbox select all or cancel all
 	$("input[name='checkall']").click(function(){
+		var checkbox = $("input[name='cc']");
 		if(this.checked){
-			$("input[name='cc']").prop("checked", true);  
-		}else{   
-			$("input[name='cc']").prop("checked", false);
-					}
+			checkbox.prop("checked", true);  
+		}else{
+			checkbox.prop("checked", false);
+		}
 	});
 
 	$("input[name='confirm_task']").click(function(){
@@ -14,7 +15,7 @@ $(function(){
 		$("#form").submit();
 	});
 
-	$("input[name='update_waitlist']").click(function(){
+	$("input[name='submit_checkbox']").click(function(){
 		var result = gether_checkbox();
 		$("#hidTD").val(JSON.stringify(result));
 		$("#form").submit();
@@ -51,7 +52,26 @@ function remove_from_waitlist(obj){
 	$.post("/dashboard/waitlist", {delete:$(tds[0]).html()});
 	tr.parentNode.removeChild(tr);
 }
+function process_task(obj){
+	alert(obj.href)
+	var tr = obj.parentNode.parentNode;
+	var tds = $(tr).find("td");
+	$.post("/deploy/list/work", {"method":obj.name,"id":$(tds[0]).html()});
+}
+function trasfer_data(obj){
+	var tr = obj.parentNode.parentNode;
+	var tds = $(tr).find("td");
+	$.get("/deploy/assignment", {"stgs":$(tds[4]).html()});
+}
+function withdraw(obj){
+		var tr = obj.parentNode.parentNode;
+		var tds = $(tr).find("td");
+		document.getElementById(obj.name).innerHTML="withdrawn";
+		document.getElementById("link"+obj.name).innerHTML="N/A";
+		$.get("/dashboard/task_sheet/"+obj.name);
+    }
 
+	
 function gether_table(){
 	var tr = $("#table tr");
 	var result = [];
@@ -59,19 +79,21 @@ function gether_table(){
 	for (var i=1; i<tr.length; i++){
 		var tds = $(tr[i]).find("td");
 		if (tds.length>0){
-			result.push($(tds[0]).html());
+			result.push($(tds[1]).html());
 		}
 	}
 	return result
 }
 
 function gether_checkbox(){
-	var check = $("input[name=cc]:checked");
 	var result = [];
-	check.each(function(){
-		var row = $(this).parent("td").parent("tr");//获取当前行
-		var tds = $(row).find("td");
-		result.push($(tds[1]).html());
+	$("input[name='cc']").each(function(){
+		if(this.checked){
+			var row = $(this).parent("td").parent("tr");//获取当前行
+			var tds = $(row).find("td");
+			result.push({"name":$(tds[1]).html(), "id":$(this).val()});
+		}
+		
 	})
 	return result
 }

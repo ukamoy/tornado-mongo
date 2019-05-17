@@ -72,3 +72,6 @@ body {
 .stdform2 span.field, .stdform2 div.field { margin-left: 150px; display: block; 
   background: #fff; padding: 15px; border-left: 1px solid #ddd; }
 .stdform2 .stdformbutton { margin-left: 0; padding: 20px; background: #fff; }
+
+.stdform span.combine{ display: inline; width: 300px; }
+
