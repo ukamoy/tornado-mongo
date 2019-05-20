@@ -66,7 +66,8 @@ def prepare_stg_files(data,task_id,key_chain):
     for stg in data:
         tradingSymbolList = stg["trade_symbols"].replace(" ","").split(",")
         symbolList = stg["assist_symbols"].replace(" ","").split(",")
-        symbolList.remove("")
+        if "" in symbolList:
+            symbolList.remove("")
         symbolList+=tradingSymbolList
         
         ac = stg['account_name']
@@ -82,7 +83,7 @@ def prepare_stg_files(data,task_id,key_chain):
         # 生成cta setting
         with open(f"{working_folder}/CTA_setting.json","w") as f:
             # 直接覆盖，不读取
-            setting = {}
+            setting = stg["strategy_setting"]
             setting["name"] = stg["name"]
             setting["className"] = stg["strategy_class_name"]
             setting["symbolList"] = vtSymbolList
@@ -91,7 +92,6 @@ def prepare_stg_files(data,task_id,key_chain):
             setting["STATUS_NOTIFY_SHIFT"] = 60 * random.randint(1,40)
             setting["ENABLE_STATUS_NOTICE"] = True
             setting["author"] = stg["Author"]
-            setting.update(stg["strategy_setting"])
 
             json.dump([setting], f, indent = 4)
 

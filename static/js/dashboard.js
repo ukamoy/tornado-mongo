@@ -53,7 +53,6 @@ function remove_from_waitlist(obj){
 	tr.parentNode.removeChild(tr);
 }
 function process_task(obj){
-	alert(obj.href)
 	var tr = obj.parentNode.parentNode;
 	var tds = $(tr).find("td");
 	$.post("/deploy/list/work", {"method":obj.name,"id":$(tds[0]).html()});

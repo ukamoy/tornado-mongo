@@ -115,7 +115,7 @@ class strategy(BaseHandler):
         self.redirect("/dashboard")
         self.checkout_git(stgs["git_path"])
 
-    def checkout_git(self,gitpath):
+    def checkout_git(self, gitpath):
         pass
 
 
@@ -173,6 +173,7 @@ class task_sheet(BaseHandler):
         args["strategies"] = list(map(lambda x: x["name"],stgs))
         
         self.db_client.insert_one("tasks", args)
+        dingding("deploy",f"{current_user['name']} submitted a task")
         # self.db_client.update_one("user",{"name":current_user["name"]},{"waitlist":[]})
         self.redirect("/dashboard/task_sheet/all")
 
@@ -194,7 +195,12 @@ class deploy(BaseHandler):
     def post(self,*args, **kwargs):
         method = self.get_argument('method')
         _id = self.get_argument('id')
+        
         self.db_client.update_one("tasks",{"_id":ObjectId(_id)},{"status":method})
+        current_user = self.get_current_user()
+        task = self.db_client.query_one("tasks",{"_id":ObjectId(_id)})
+        dingding("deploy", f"{task['Author']}'s task: {task['task_id']}  {method}")
+
 
 class assignment(BaseHandler):
     @tornado.web.authenticated
@@ -216,10 +222,9 @@ class assignment(BaseHandler):
         for serv, _id in zip(server_name, _ids):
             self.db_client.update_one("strategy",{"_id":ObjectId(_id)},{"server":serv})
 
-        r = self.assign_task(_ids, task_id)
-        if r:
-            self.db_client.update_one("tasks",{"_id":ObjectId(task_id)},{"status":"assigned"})
-            dingding("xxx",r)
+        msg = self.assign_task(_ids, task_id)
+        self.db_client.update_one("tasks",{"_id":ObjectId(task_id)},{"status":"assigned"})
+        dingding("deploy",f"task: {task_id} assigned \n {msg}")
         self.redirect("/deploy/list/todo")
 
     def assign_task(self, _ids, task_id):
@@ -276,6 +281,7 @@ class server(BaseHandler):
 
         for k,v in server_history.items():
             self.db_client.update_one("server",{"server_name":k},{"history":v})
+            dingding("deploy",msg)
         self.redirect("/deploy/server")
 #---------------------------------------------------------------------
 

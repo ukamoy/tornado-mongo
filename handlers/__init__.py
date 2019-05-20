@@ -1,6 +1,7 @@
 import tornado.web
 from dayu.util.db_conn import db_client
 from dayu.util.user import Member
+from datetime import datetime
 
 class BaseHandler(tornado.web.RequestHandler):
     def initialize(self):
@@ -12,12 +13,12 @@ class BaseHandler(tornado.web.RequestHandler):
 
     def get_current_user(self):
         # For read only
-        print("cookie:", self.get_cookie("auth"))
         member = self.db_client.query_one("user", {"auth": self.get_cookie('auth')})
         if member:
             return self._member_db_map(member)
         else:
             return {}
+        print()
 
     def get_user(self, uid=None, name=None):
         print(uid,name)
@@ -48,6 +49,7 @@ class BaseHandler(tornado.web.RequestHandler):
     def _member_db_map(self, db):
         # The returned dict object supply a uniform database access interface 
         try:
+            print(f"{datetime.now().strftime('%y%m%d %H:%M:%S')}: {db['name']}")
             return dict(
                 uid = db['uid'],
                 name = db['name'],
