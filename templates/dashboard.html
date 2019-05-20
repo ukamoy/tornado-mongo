@@ -1,93 +1,53 @@
 {% extends "base.html" %}
 {% block head %}
-<link rel="stylesheet" type="text/css" href="{{static_url("css/dashboard.css")}}" rel="stylesheet">
-<!-- <link rel="stylesheet" type="text/css" href="{{static_url("css/DT_bootstrap.css")}}" rel="stylesheet"> -->
-<script type="text/javascript" language="javascript" src="{{static_url("js/dashboard.js")}}"></script>
-<!-- <script type="text/javascript" language="javascript" src="{{static_url("js/DT_bootstrap.js")}}"></script> -->
 {% end %}
 {% block body %}
 <div class="pageContainer">
-    {%if title == "DASHBOARD"%}
     {% include "admin_nav.html" %}
     <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-        
-            <h2 class="sub-header">Strategy List</h2>
-            <a href="/dashboard/strategy/new" class="btn btn-sm btn-primary">New Strategy</a>
-            <!-- <form action="/dashboard/waitlist" method="post" id="form"> -->
-                <form action="/dashboard/task_sheet/all" method="post" id="form">
-        {% else %}
-        {% include "dp_nav.html" %}
-            <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-            <h2 class="sub-header">Process Task</h2>
-            <form action="/deploy/assignment/deploy" method="post" id="form">
-        {%end%}
+        <h2 class="sub-header">Strategy List</h2>
+        <a href="/dashboard/strategy/new" class="btn btn-sm btn-primary">New Strategy</a>
+        <!-- <form action="/dashboard/waitlist" method="post" id="form"> -->
+        <form action="/dashboard/task_sheet/all" method="post" id="form">
         {%if data%}
-        <div class="table-responsive" style="margin-top: 10px">
-            <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="strategy_list">
-                <thead>
-                    <tr>
-                        {%if title == "DASHBOARD"%}
-                        <th><input type="checkbox" class="checkall" name="checkall"></th>
-                        {%end%}
-                        <th>Name</th>
-                        <th>Git path</th>
-                        <th>Symbols</th>
-                        <th>Account</th>
-                        <th>Settings</th>
-                        <th>Server</th>
-                        <th>Update Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for d in data %}
-                    <tr class="odd gradeX">
-                        {%if title == "DASHBOARD"%}
-                        <td><input type="checkbox" value="{{d['name']}}" name="cc"></td>
-                        {%end%}
-                        <td>{{d["name"]}}</td>
-                        <td><a href = "/dashboard/strategy/{{d['_id']}}">{{d["git_path"]}}</a></td>
-                        <td>{{d["trade_symbols"]}}</td>
-                        <td>{{d["account_name"]}}</td>
-                        <td class="center">read</td>
-                        {%if title == "DASHBOARD"%}
+            <div class="table-responsive" style="margin-top: 10px">
+                <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="strategy_list">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" class="checkall" name="checkall"></th>
+                            <th>Name</th>
+                            <th>Git path</th>
+                            <th>Symbols</th>
+                            <th>Account</th>
+                            <th>Settings</th>
+                            <th>Server</th>
+                            <th>Update Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in data %}
+                        <tr class="odd gradeX">
+                            <td><input type="checkbox" value="{{d['name']}}" name="cc"></td>
+                            <td>{{d["name"]}}</td>
+                            <td><a href = "/dashboard/strategy/{{d['_id']}}">{{d["git_path"]}}</a></td>
+                            <td>{{d["trade_symbols"]}}</td>
+                            <td>{{d["account_name"]}}</td>
+                            <td class="center">read</td>
                             <td class="center">{{d["server"]}}</td>
-                        {% else %}
-                        <td class="center">
-                            <input type="hidden" value="{{d['_id']}}" name = "_id">
-                            <select name="server_name" class="form-control" required>
-                            {% for item in serv%}
-                                {% if d["server"] == item %}
-                                    <option value = "{{item}}" selected="selected">{{item}}</option>
-                                {%else%}
-                                    <option value = "{{item}}">{{item}}</option>
-                                {%end%}
-                            {%end%}
-                            {% if d["server"] == "idle" %}
-                                <option value = "idle" selected="selected">idle</option>
-                            {%else%}
-                                <option value = "idle">idle</option>
-                            {%end%}
+                            <td class="center">{{d["updatetime"]}}</td>
+                        </tr>
                         {% end %}
-                        </select></td>
-                        <td class="center">{{d["updatetime"]}}</td>
-                    </tr>
-                    {% end %}
-                </tbody>
-            </table>
-        </div>
-        <div class = "row">
-            {%if title == "DASHBOARD"%}
+                    </tbody>
+                </table>
+            </div>
+            <div class = "row">
                 <input type="hidden" value="" id = "hidTD" name = "strategies">
                 <input type="button" class="btn btn-sm btn-primary" name = "submit_checkbox" value="Add to Tasks">
-            {% else %}
-                <input type="hidden" value="{{task_id}}" name = "task_id">
-                <button type="submit" class="btn btn-sm btn-primary">Deploy</button>
-            {% end %}
-        </div>
-    {% else %}
-    no data
-    {% end %}
-    </form>
+            </div>
+        {% else %}
+            no data
+        {% end %}
+        </form>
     </div>
 </div>
 

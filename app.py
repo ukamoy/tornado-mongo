@@ -83,7 +83,7 @@ class dashboard(BaseHandler):
         else:
             qry = {"Author":current_user["name"]}
         json_obj = self.db_client.query("strategy",qry,[('_id', -1)])
-        self.render("dashboard.html", title = "DASHBOARD", data = json_obj,serv=None)
+        self.render("dashboard.html", title = "DASHBOARD", data = json_obj)
 
 class strategy(BaseHandler):
     @tornado.web.authenticated
@@ -213,7 +213,7 @@ class assignment(BaseHandler):
         json_obj = self.db_client.query("strategy",{"name":{"$in":stgs}}) 
         servers = self.db_client.query("server",{},[('_id', -1)])
         serv_name = list(map(lambda x: x["server_name"],servers))
-        self.render("dashboard.html", title = "ASSIGN SERVER", data = json_obj,serv = serv_name, task_id=args[0])
+        self.render("task_info.html", title = "ASSIGN SERVER", data = json_obj, serv = serv_name, task_id=args[0])
     
     def post(self,*args,**kwargs):
         server_name = self.get_arguments('server_name')
