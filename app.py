@@ -245,8 +245,10 @@ class assignment(BaseHandler):
         servers = self.db_client.query("server",{"server_name":{"$in":server_names}})
         
         key_chain = {}
-        qry = list(map(lambda x: x['account_name'], json_obj))
-        keys = self.db_client.query("account",{"name":{"$in":qry}})
+        key_list = []
+        for item in json_obj:
+            key_list+=(item['trade_symbols_ac'] + item['assist_symbols_ac'])
+        keys = self.db_client.query("account",{"name":{"$in":list(set(key_list))}})
         for key in keys:
             key_chain.update({key["name"]:[key["apikey"],key["secretkey"],key["passphrase"]]})
         

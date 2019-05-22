@@ -102,13 +102,13 @@ function load(){
                         {% for ex,ac,sym in zip(data["assist_symbols_ex"],data["assist_symbols_ac"],data["assist_symbols"])%}
                         {%set i+=1%}
                             <span class="field" id="a{{i}}">
-                                <select name="assist_symbols_ex" class="form-select-combine" id="parenta{{i}}" onchange= "changeOpt(this)" required>
+                                <select name="assist_symbols_ex" class="form-select-combine" id="parenta{{i}}" onchange= "changeOpt(this)" >
                                     <option value= "{{ex}}" selected="selected">{{ex}}</option>
                                 </select>
-                                <select name="assist_symbols_ac" class="form-select-combine" id="childa{{i}}" required>
+                                <select name="assist_symbols_ac" class="form-select-combine" id="childa{{i}}" >
                                     <option value= "{{ac}}" selected="selected">{{ac}}</option>
                                 </select>
-                                <select name="assist_symbols" class="form-select-combine" id="child2a{{i}}" required>
+                                <select name="assist_symbols" class="form-select-combine" id="child2a{{i}}" >
                                     <option value= "{{sym}}" selected="selected">{{sym}}</option>
                                 </select>
                                 <input name="button" class="form-select-combine" id="add_sym" type="button" value="Edit" onclick="updateAccount(this)">
@@ -119,11 +119,11 @@ function load(){
                         {% end %}
                     {%else%}
                         <span class="field" id=a1>
-                            <select name="assist_symbols_ex" class="form-select-combine" id="parenta1" onchange= "changeOpt(this)" required>
+                            <select name="assist_symbols_ex" class="form-select-combine" id="parenta1" onchange= "changeOpt(this)" >
                             </select>
-                            <select name="assist_symbols_ac" class="form-select-combine" id="childa1" required>
+                            <select name="assist_symbols_ac" class="form-select-combine" id="childa1" >
                             </select>
-                            <select name="assist_symbols" class="form-select-combine" id="child2a1" required>
+                            <select name="assist_symbols" class="form-select-combine" id="child2a1" >
                             </select>
                             <input name="button" class="form-select-combine" id="add_sym" type="button" value="+" onclick="addSymbolRow(this)">
                             <input name="button" class="form-select-combine" id="remove_sym" type="button" value="-" onclick="removeSymbolRow(this)">
