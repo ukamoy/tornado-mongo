@@ -18,7 +18,7 @@ def mongo_obj(id_list):
         ids.append(ObjectId(id_))
     return ids
 
-class MainHandler(BaseHandler):
+class home(BaseHandler):
     def get(self):
         current_user = self.get_current_user()
         if current_user:
@@ -89,18 +89,34 @@ class strategy(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
         stg = {} if args[0] =='new' else self.db_client.query_one("strategy",{"_id":ObjectId(args[0])}) 
-        self.render("strategy.html", title = "New Strategy", data = stg, account = self.account_list )
+        self.render("strategy.html", title = "New Strategy", data = stg)
     
     def post(self,*args,**kwargs):
         current_user = self.get_current_user()
-        post_values = ['git_path','name','strategy_class_name',
-        'trade_symbols','assist_symbols','account_name']
+        post_values = ['trade_symbols','trade_symbols_ex','trade_symbols_ac',
+        'assist_symbols','assist_symbols_ex','assist_symbols_ac']
         stgs = {}
         for v in post_values:
-            stgs[v] = self.get_argument(v, None)
+            stgs[v] = self.get_body_arguments(v, None)
 
         stg_set = self.get_argument('strategy_setting', {})
         stgs["strategy_setting"] = eval(stg_set)
+        stgs["git_path"] = self.get_argument('git_path', None)
+        stgs["name"] = self.get_argument('name', None)
+        stgs["strategy_class_name"] = self.get_argument('strategy_class_name', None)
+
+        sym_list = []
+        for ex,ac,sym in zip(stgs["assist_symbols_ex"],stgs["assist_symbols_ac"],stgs["assist_symbols"]):
+            sym_list.append(f"{sym}:{ex}_{ac}")
+        stgs["tradeSymbolList"] = []
+        for ex,ac,sym in zip(stgs["trade_symbols_ex"],stgs["trade_symbols_ac"],stgs["trade_symbols"]):
+            stgs["tradeSymbolList"].append(f"{sym}:{ex}_{ac}")
+        
+        for symbol in list(sym_list):
+            if symbol in stgs["tradeSymbolList"]:
+                sym_list.remove(symbol)
+            
+        stgs["symbolList"] =stgs["tradeSymbolList"] + sym_list
 
         if self.get_argument("_id", None):
             flt={"_id":ObjectId(self.get_argument("_id"))}
@@ -113,11 +129,6 @@ class strategy(BaseHandler):
             stgs["updatetime"] = stgs["createtime"]
             self.db_client.insert_one("strategy", stgs)
         self.redirect("/dashboard")
-        self.checkout_git(stgs["git_path"])
-
-    def checkout_git(self, gitpath):
-        pass
-
 
 # class waitlist(BaseHandler):
 #     @tornado.web.authenticated
@@ -283,6 +294,34 @@ class server(BaseHandler):
             self.db_client.update_one("server",{"server_name":k},{"history":v})
             dingding("deploy",msg)
         self.redirect("/deploy/server")
+
+class MainHandler(BaseHandler):
+    @tornado.web.authenticated
+    def get(self,*args,**kwargs):
+        print("conn get\n",args, self.request.__dict__)
+        if self.get_argument("checkName", None):
+            qry = self.get_argument("checkName")
+            r = self.db_client.query_one("strategy",{"name":qry})
+        elif self.get_argument("checkUser", None):
+            qry = self.get_argument("checkUser")
+            r = self.db_client.query_one("user",{"name":qry})
+        elif self.get_argument("task_id", None):
+            t = self.get_argument("task_id")
+            n = self.get_argument("stg_name")
+            qry = {"_id":ObjectId(t)}
+            r = self.db_client.query_one("tasks",qry)
+            running_stg = r["running"].append(n)
+            self.db_client.update_one("tasks",qry,{"running":running_stg})
+        elif self.get_argument("getAccount", None):
+            self.finish(self.ac_dict)
+            return
+        if r:
+            msg = True
+        else:
+            msg = False
+        self.finish(json.dumps(msg))
+    def post(self,*args,**kwargs):
+        print("conn post\n",args, self.request.__dict__)
 #---------------------------------------------------------------------
 
 settings = {
@@ -292,7 +331,7 @@ settings = {
 }
 
 application = tornado.web.Application([
-    (r"/", MainHandler), 
+    (r"/", home), 
     (r"/dashboard", dashboard), 
     (r"/dashboard/strategy/([a-zA-Z0-9]+)", strategy), 
     # (r"/dashboard/waitlist", waitlist), 
@@ -302,6 +341,7 @@ application = tornado.web.Application([
     (r"/deploy/server", server),
     (r"/query_order", query_order),
     (r"/strategy_performance", strategy_performance),
+    (r"/dy", MainHandler), 
 ],**settings)
 
 if __name__ == "__main__":

@@ -1,9 +1,5 @@
 {% extends "base.html" %}
 {% block head %}
-<link rel="stylesheet" type="text/css" href="{{static_url("css/dashboard.css")}}" rel="stylesheet">
-<!-- <link rel="stylesheet" type="text/css" href="{{static_url("css/DT_bootstrap.css")}}" rel="stylesheet"> -->
-<script type="text/javascript" language="javascript" src="{{static_url("js/dashboard.js")}}"></script>
-<!-- <script type="text/javascript" language="javascript" src="{{static_url("js/DT_bootstrap.js")}}"></script> -->
 {% end %}
 {% block body %}
 <div class="pageContainer">
@@ -19,7 +15,6 @@
                         <th>Name</th>
                         <th>Git path</th>
                         <th>Symbols</th>
-                        <th>Account</th>
                         <th>Settings</th>
                         <th>Server</th>
                         <th>Update Time</th>
@@ -30,8 +25,7 @@
                     <tr class="odd gradeX">
                         <td>{{d["name"]}}</td>
                         <td><a href = "/dashboard/strategy/{{d['_id']}}">{{d["git_path"]}}</a></td>
-                        <td>{{d["trade_symbols"]}}</td>
-                        <td>{{d["account_name"]}}</td>
+                        <td>{{d["symbolList"]}}</td>
                         <td class="center">read</td>
                         <td class="center">
                             <input type="hidden" value="{{d['_id']}}" name = "_id">

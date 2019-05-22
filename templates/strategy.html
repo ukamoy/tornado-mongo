@@ -1,17 +1,23 @@
 {% extends "base.html" %}
 {% block head %}
 <title>{{ title }}</title>
-<link rel="stylesheet" type="text/css" href="{{static_url("css/dashboard.css")}}" rel="stylesheet">
-<link href="{{static_url("css/table.css")}}" rel="stylesheet">
-
+<link rel="stylesheet" type="text/css" href="{{static_url('css/dashboard.css')}}" rel="stylesheet">
+<link href="{{static_url('css/table.css')}}" rel="stylesheet">
+<script >
+function load(){
+    getAccount("parent1");
+    getAccount("parenta1");
+}
+</script>
 {% end %}
 {% block body %}
+<body onload="load()">
 <div class="container-fluid">
     {% include "admin_nav.html" %}
 
     <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
         <div style="margin-top: 10px">
-            <form class="stdform stdform2" action="/dashboard/strategy/save" method="post">
+            <form class="stdform stdform2" action="/dashboard/strategy/save" method="post" id="form">
                 
                 <p>
                     <label>Git Path</label>
@@ -27,9 +33,11 @@
                     <label>Strategy Name</label>
                         <span class="field">
                         {% if data %}
-                            <input type="text" name="name" class="form-control" value="{{data['name']}}" required>
+                            <input type="text" name="name" class="form-control" value="{{data['name']}}" onblur="check_name()" required>
+                            <span id="nametip" class="prompt"></span>
                         {% else %}
-                            <input type="text" name="name" class="form-control" placeholder="Strategy Name (Max Length = 13)" required>
+                            <input type="text" name="name" class="form-control" placeholder="Strategy Name (Max Length = 13)" onblur="check_name()" required>
+                            <span id="nametip" class="prompt"></span>
                         {% end %}
                         </span><!--field-->
                 </p>
@@ -45,33 +53,75 @@
                 </p>
                 <p>
                     <label>Trade Symbol</label>
-                    <span class="field">
-                        {% if data %}
-                            <input type="text" name="trade_symbols" class="form-control" value="{{data['trade_symbols']}}" required>
-                        {% else %}
-                            <input type="text" name="trade_symbols" class="form-control" placeholder="Trade Symbols" required>
+                    {% if data %}
+                        {%set i=0%}
+                        {% for ex,ac,sym in zip(data["trade_symbols_ex"],data["trade_symbols_ac"],data["trade_symbols"])%}
+                        {%set i+=1%}
+                            <span class="field" id="{{i}}">
+                                <select name="trade_symbols_ex" class="form-select-combine" id="parent{{i}}" onchange= "changeOpt(this)" required>
+                                    <option value= "{{ex}}" selected="selected">{{ex}}</option>
+                                </select>
+                                <select name="trade_symbols_ac" class="form-select-combine" id="child{{i}}" required>
+                                    <option value= "{{ac}}" selected="selected">{{ac}}</option>
+                                </select>
+                                <select name="trade_symbols" class="form-select-combine" id="child2{{i}}" required>
+                                    <option value= "{{sym}}" selected="selected">{{sym}}</option>
+                                </select>
+                                <input name="button" class="form-select-combine" id="add_sym" type="button" value="Edit" onclick="updateAccount(this)">
+                                <input name="button" class="form-select-combine" id="add_sym" type="button" value="+" onclick="addSymbolRow(this)">
+                                <input name="button" class="form-select-combine" id="remove_sym" type="button" value="-" onclick="removeSymbolRow(this)">
+                                <span id="actip" class="prompt"></span>
+                            </span><!--field-->
                         {% end %}
-                        <select name="account_name" class="form-control" required>
-                            <option value = "">Choose an Account</option>
-                            {% for item in account%}
-                                {% if data and item == data["account_name"]%}
-                                    <option value = "{{item}}" selected="selected">{{item}}</option>
-                                {%else%}
-                                    <option value = "{{item}}">{{item}}</option>
-                                {%end%}
-                            {% end %}
-                        </select>
-                    </span>
+                    {%else%}
+                        <span class="field" id=1>
+                            <select name="trade_symbols_ex" class="form-select-combine" id="parent1" onchange= "changeOpt(this)" required>
+                            </select>
+                            <select name="trade_symbols_ac" class="form-select-combine" id="child1" required>
+                            </select>
+                            <select name="trade_symbols" class="form-select-combine" id="child21" required>
+                            </select>
+                            <input name="button" class="form-select-combine" id="add_sym" type="button" value="+" onclick="addSymbolRow(this)">
+                            <input name="button" class="form-select-combine" id="remove_sym" type="button" value="-" onclick="removeSymbolRow(this)">
+                            <span id="actip" class="prompt"></span>
+                        </span><!--field-->
+                    {% end %}
                 </p>
                 <p>
                     <label>Assist Symbol</label>
-                    <span class="field">
-                        {% if data %}
-                            <input type="text" name="assist_symbols" class="form-control" value="{{data['assist_symbols']}}">
-                        {% else %}
-                            <input type="text" name="assist_symbols" class="form-control" placeholder="For Subscription Only">
+                    {% if data %}
+                        {%set i=0%}
+                        {% for ex,ac,sym in zip(data["assist_symbols_ex"],data["assist_symbols_ac"],data["assist_symbols"])%}
+                        {%set i+=1%}
+                            <span class="field" id="a{{i}}">
+                                <select name="assist_symbols_ex" class="form-select-combine" id="parenta{{i}}" onchange= "changeOpt(this)" required>
+                                    <option value= "{{ex}}" selected="selected">{{ex}}</option>
+                                </select>
+                                <select name="assist_symbols_ac" class="form-select-combine" id="childa{{i}}" required>
+                                    <option value= "{{ac}}" selected="selected">{{ac}}</option>
+                                </select>
+                                <select name="assist_symbols" class="form-select-combine" id="child2a{{i}}" required>
+                                    <option value= "{{sym}}" selected="selected">{{sym}}</option>
+                                </select>
+                                <input name="button" class="form-select-combine" id="add_sym" type="button" value="Edit" onclick="updateAccount(this)">
+                                <input name="button" class="form-select-combine" id="add_sym" type="button" value="+" onclick="addSymbolRow(this)">
+                                <input name="button" class="form-select-combine" id="remove_sym" type="button" value="-" onclick="removeSymbolRow(this)">
+                                <span id="actip" class="prompt"></span>
+                            </span><!--field-->
                         {% end %}
-                    </span><!--field-->
+                    {%else%}
+                        <span class="field" id=a1>
+                            <select name="assist_symbols_ex" class="form-select-combine" id="parenta1" onchange= "changeOpt(this)" required>
+                            </select>
+                            <select name="assist_symbols_ac" class="form-select-combine" id="childa1" required>
+                            </select>
+                            <select name="assist_symbols" class="form-select-combine" id="child2a1" required>
+                            </select>
+                            <input name="button" class="form-select-combine" id="add_sym" type="button" value="+" onclick="addSymbolRow(this)">
+                            <input name="button" class="form-select-combine" id="remove_sym" type="button" value="-" onclick="removeSymbolRow(this)">
+                            <span id="actip" class="prompt"></span>
+                        </span><!--field-->
+                    {% end %}
                 </p>
                 <p>
                 <label>Strategy Setting</label>
@@ -86,9 +136,8 @@
                 {% if data %}
                     <input type="hidden" id = "hidTD" name = "_id" value = "{{data['_id']}}">
                 {% end %}
-                <button class="btn btn-lg btn-primary btn-block" type="submit">Submit</button>
+                <button class="btn btn-lg btn-primary btn-block" type="submit" id="submitbutton">Submit</button>
             </form>
-
         </div>
     </div>
 </div>

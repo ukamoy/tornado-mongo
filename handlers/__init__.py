@@ -7,9 +7,13 @@ class BaseHandler(tornado.web.RequestHandler):
     def initialize(self):
         self.db_client = db_client()
         
-        json_obj = self.db_client.query("account",{})
-        ac_list = list(set(map(lambda x: x["name"],json_obj)))
-        self.account_list = sorted(ac_list)
+        json_obj = self.db_client.query("exchange",{})
+        ex_list = list(set(map(lambda x: x["name"],json_obj)))
+        self.ac_dict = {}
+        for x in sorted(ex_list):
+            for ex in json_obj:
+                if ex["name"] == x:
+                    self.ac_dict.update({x:[ex["keys"],ex["symbols"]]})
 
     def get_current_user(self):
         # For read only
@@ -54,7 +58,7 @@ class BaseHandler(tornado.web.RequestHandler):
                 uid = db['uid'],
                 name = db['name'],
                 email = db['email'],
-                waitlist = db['waitlist'],            
+                # waitlist = db['waitlist'],            
                 brief = db['brief'],
                 like = db['like'],
                 avatar = db['avatar'],

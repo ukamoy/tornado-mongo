@@ -18,7 +18,6 @@
                             <th>Name</th>
                             <th>Git path</th>
                             <th>Symbols</th>
-                            <th>Account</th>
                             <th>Settings</th>
                             <th>Server</th>
                             <th>Update Time</th>
@@ -30,8 +29,7 @@
                             <td><input type="checkbox" value="{{d['name']}}" name="cc"></td>
                             <td>{{d["name"]}}</td>
                             <td><a href = "/dashboard/strategy/{{d['_id']}}">{{d["git_path"]}}</a></td>
-                            <td>{{d["trade_symbols"]}}</td>
-                            <td>{{d["account_name"]}}</td>
+                            <td>{{d["symbolList"]}}</td>
                             <td class="center">read</td>
                             <td class="center">{{d["server"]}}</td>
                             <td class="center">{{d["updatetime"]}}</td>

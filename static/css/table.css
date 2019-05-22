@@ -41,7 +41,16 @@ body {
     border-top-left-radius: 0;
     border-top-right-radius: 0;
   }
-  
+  .form-select-combine {
+    position: relative;
+    height: auto;
+    -webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
+    padding: 10px;
+    font-size: 12px;
+  }
+
 .stdform p, .stdform div.par { margin: 20px 0; }
 .stdform div.par { overflow: hidden; }
 .stdform span.field, .stdform div.field { margin-left: 150px; display: block; position: relative; }
@@ -73,5 +82,14 @@ body {
   background: #fff; padding: 15px; border-left: 1px solid #ddd; }
 .stdform2 .stdformbutton { margin-left: 0; padding: 20px; background: #fff; }
 
-.stdform span.combine{ display: inline; width: 300px; }
+.prompt {
+  position: relative;
+  font-size: 14px;
+  color:green;
+}
 
+.prompt_alert {
+  position: relative;
+  font-size: 14px;
+  color:red;
+}
