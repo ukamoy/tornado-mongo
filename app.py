@@ -88,8 +88,8 @@ class dashboard(BaseHandler):
 class strategy(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
-        stg = {} if args[0] =='new' else self.db_client.query_one("strategy",{"_id":ObjectId(args[0])}) 
-        self.render("strategy.html", title = "New Strategy", data = stg)
+        stgs = {} if args[0] =='new' else self.db_client.query_one("strategy",{"_id":ObjectId(args[0])}) 
+        self.render("strategy.html", title = "New Strategy", data = stgs)
     
     def post(self,*args,**kwargs):
         current_user = self.get_current_user()

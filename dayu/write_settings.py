@@ -64,16 +64,7 @@ def prepare_stg_files(data,task_id,key_chain):
         shutil.rmtree(s)
 
     for stg in data:
-        tradingSymbolList = stg["trade_symbols"].replace(" ","").split(",")
-        symbolList = stg["assist_symbols"].replace(" ","").split(",")
-        if "" in symbolList:
-            symbolList.remove("")
-        symbolList+=tradingSymbolList
-        
         ac = stg['account_name']
-        vtTradingSymbolList = list(map(lambda x: f"{x}:OKEX_{ac}", tradingSymbolList))
-        vtSymbolList = list(map(lambda x: f"{x}:OKEX_{ac}", list(set(symbolList))))
-        
         working_folder = f"{working_path}/{task_id}/{stg['server']}/{stg['name']}"
         # 复制工作目录
         shutil.copytree(f"{source_folder}/{stg['git_path']}",f"{working_folder}")
@@ -86,8 +77,8 @@ def prepare_stg_files(data,task_id,key_chain):
             setting = stg["strategy_setting"]
             setting["name"] = stg["name"]
             setting["className"] = stg["strategy_class_name"]
-            setting["symbolList"] = vtSymbolList
-            setting["tradingSymbolList"] = vtTradingSymbolList
+            setting["symbolList"] = stg["symbolList"]
+            setting["tradingSymbolList"] = stg["tradeSymbolList"]
             setting["STATUS_NOTIFY_PERIOD"] = 3600
             setting["STATUS_NOTIFY_SHIFT"] = 60 * random.randint(1,40)
             setting["ENABLE_STATUS_NOTICE"] = True
@@ -101,7 +92,7 @@ def prepare_stg_files(data,task_id,key_chain):
                 "apiKey": key_chain[ac][0],
                 "apiSecret": key_chain[ac][1],
                 "passphrase": key_chain[ac][2],
-                "symbols": symbolList,
+                "symbols": list(map(lambda x: x.split(":")[0], stg["symbolList"])),
                 "future_leverage": 20,
                 "swap_leverage": 100,
                 "margin_token": 0,

@@ -3,12 +3,14 @@
 <title>{{ title }}</title>
 <link rel="stylesheet" type="text/css" href="{{static_url('css/dashboard.css')}}" rel="stylesheet">
 <link href="{{static_url('css/table.css')}}" rel="stylesheet">
+{% if not data %}
 <script >
 function load(){
     getAccount("parent1");
     getAccount("parenta1");
 }
 </script>
+{% end %}
 {% end %}
 {% block body %}
 <body onload="load()">
@@ -89,7 +91,7 @@ function load(){
                 </p>
                 <p>
                     <label>Assist Symbol</label>
-                    {% if data %}
+                    {% if data["assist_symbols"] %}
                         {%set i=0%}
                         {% for ex,ac,sym in zip(data["assist_symbols_ex"],data["assist_symbols_ac"],data["assist_symbols"])%}
                         {%set i+=1%}
