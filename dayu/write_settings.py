@@ -64,7 +64,6 @@ def prepare_stg_files(data,task_id,key_chain):
         shutil.rmtree(s)
 
     for stg in data:
-        ac = stg['account_name']
         working_folder = f"{working_path}/{task_id}/{stg['server']}/{stg['name']}"
         # 复制工作目录
         shutil.copytree(f"{source_folder}/{stg['git_path']}",f"{working_folder}")
@@ -87,18 +86,20 @@ def prepare_stg_files(data,task_id,key_chain):
             json.dump([setting], f, indent = 4)
 
         # 生成connect
-        with open(f"{working_folder}/OKEX_{ac}_connect.json","w") as f:
-            setting = {
-                "apiKey": key_chain[ac][0],
-                "apiSecret": key_chain[ac][1],
-                "passphrase": key_chain[ac][2],
-                "symbols": list(map(lambda x: x.split(":")[0], stg["symbolList"])),
-                "future_leverage": 20,
-                "swap_leverage": 100,
-                "margin_token": 0,
-                "sessionCount": 3,
-                "setQryEnabled": True,
-                "setQryFreq": 60,
-                "trace": False,
-            }
-            json.dump(setting, f, indent = 4)
+        key_list = list(set(stg['trade_symbols_ac'] + stg['assist_symbols_ac']))
+        for ac in key_list:
+            with open(f"{working_folder}/OKEX_{ac}_connect.json","w") as f:
+                setting = {
+                    "apiKey": key_chain[ac][0],
+                    "apiSecret": key_chain[ac][1],
+                    "passphrase": key_chain[ac][2],
+                    "symbols": list(map(lambda x: x.split(":")[0], stg["symbolList"])),
+                    "future_leverage": 20,
+                    "swap_leverage": 100,
+                    "margin_token": 0,
+                    "sessionCount": 3,
+                    "setQryEnabled": True,
+                    "setQryFreq": 60,
+                    "trace": False,
+                }
+                json.dump(setting, f, indent = 4)
