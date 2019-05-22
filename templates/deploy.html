@@ -23,8 +23,8 @@
                     <tr class="odd gradeX">
                         <td style="display:none">{{d["_id"]}}</td>
                         <td><a href="/deploy/assignment/{{d['_id']}}">{{d["task_id"]}}</a></td>
-                        <td>{{d["status"]}}</td>
-                        <td>
+                        <td id = "{{d['_id']}}">{{d["status"]}}</td>
+                        <td id = "link{{d['_id']}}">
                             {%if d["status"] == 'submitted' %}
                                 <a class="btn btn-sm btn-primary" href="javascript:;" onclick = "process_task(this)" name = "processing">P</a>   
                                 <a class="btn btn-sm btn-primary" href="javascript:;" onclick = "process_task(this)" name = "rejected">X</a>   

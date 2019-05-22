@@ -54,7 +54,9 @@ function remove_from_waitlist(obj){
 }
 function process_task(obj){
 	var tr = obj.parentNode.parentNode;
-	var tds = $(tr).find("td");
+    var tds = $(tr).find("td");
+    document.getElementById(obj.name).innerHTML = obj.name;
+	document.getElementById("link"+obj.name).innerHTML="N/A";
 	$.post("/deploy/list/work", {"method":obj.name,"id":$(tds[0]).html()});
 }
 function trasfer_data(obj){

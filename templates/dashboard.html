@@ -16,9 +16,7 @@
                         <tr>
                             <th><input type="checkbox" class="checkall" name="checkall"></th>
                             <th>Name</th>
-                            <th>Git path</th>
                             <th>Symbols</th>
-                            <th>Settings</th>
                             <th>Server</th>
                             <th>Update Time</th>
                         </tr>
@@ -27,10 +25,8 @@
                         {% for d in data %}
                         <tr class="odd gradeX">
                             <td><input type="checkbox" value="{{d['name']}}" name="cc"></td>
-                            <td>{{d["name"]}}</td>
-                            <td><a href = "/dashboard/strategy/{{d['_id']}}">{{d["git_path"]}}</a></td>
+                            <td><a href = "/dashboard/strategy/{{d['_id']}}">{{d["name"]}}</a></td>
                             <td>{{d["symbolList"]}}</td>
-                            <td class="center">read</td>
                             <td class="center">{{d["server"]}}</td>
                             <td class="center">{{d["updatetime"]}}</td>
                         </tr>
