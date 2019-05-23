@@ -220,6 +220,7 @@ class assignment(BaseHandler):
         if not current_user["group"] == "zeus":
             return self.redirect("/dashboard")
         task = self.db_client.query_one("tasks",{"_id":ObjectId(args[0])})
+        print(task,args)
         stgs = task["strategies"]
         json_obj = self.db_client.query("strategy",{"name":{"$in":stgs}}) 
         servers = self.db_client.query("server",{},[('_id', -1)])
@@ -277,7 +278,7 @@ class server(BaseHandler):
         branch = self.get_argument("branch")
         server_ips = json.loads(self.get_argument("server_ips"))
         server_history = {}
-        msg = f"update vnpy to {branch}"
+        msg = f"update vnpy to {branch}\n"
         for server in server_ips:
             c = Connection(f"dayu@{server['id']}", connect_kwargs = {"password":"Xinger520"})
             USER_HOME = "/home/dayu"

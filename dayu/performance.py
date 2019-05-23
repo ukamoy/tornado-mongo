@@ -146,11 +146,11 @@ def run(DB_QUERY):
     db = MongoClient(MONGO_URI)[DB_NAME]
     Cursor = db["future"].find(DB_QUERY)
     df = pd.DataFrame(list(Cursor))
-    print(df.shape,DB_QUERY)
 
     if df.size > 0:
         data = df[["datetime","account","strategy","instrument_id","filled_qty","price_avg","fee","type","contract_val","order_type"]]
         data = data.sort_values(by = "datetime", ascending = True)
+        data.to_csv("a.csv")
         
         # 缓存结算价格
         currency_list = list(set(data["instrument_id"]))

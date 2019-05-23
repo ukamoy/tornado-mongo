@@ -55,9 +55,10 @@ function remove_from_waitlist(obj){
 function process_task(obj){
 	var tr = obj.parentNode.parentNode;
     var tds = $(tr).find("td");
-    document.getElementById(obj.name).innerHTML = obj.name;
-	document.getElementById("link"+obj.name).innerHTML="N/A";
-	$.post("/deploy/list/work", {"method":obj.name,"id":$(tds[0]).html()});
+    var _id = $(tds[0]).html();
+    document.getElementById(_id).innerHTML = obj.name;
+	document.getElementById("link"+_id).innerHTML="N/A";
+	$.post("/deploy/list/work", {"method":obj.name,"id":_id});
 }
 function trasfer_data(obj){
 	var tr = obj.parentNode.parentNode;
@@ -65,12 +66,12 @@ function trasfer_data(obj){
 	$.get("/deploy/assignment", {"stgs":$(tds[4]).html()});
 }
 function withdraw(obj){
-		var tr = obj.parentNode.parentNode;
-		var tds = $(tr).find("td");
-		document.getElementById(obj.name).innerHTML="withdrawn";
-		document.getElementById("link"+obj.name).innerHTML="N/A";
-		$.get("/dashboard/task_sheet/"+obj.name);
-    }
+    var tr = obj.parentNode.parentNode;
+    var tds = $(tr).find("td");
+    document.getElementById(obj.name).innerHTML="withdrawn";
+    document.getElementById("link"+obj.name).innerHTML="N/A";
+    $.get("/dashboard/task_sheet/"+obj.name);
+}
 
 	
 function gether_table(){
@@ -92,7 +93,7 @@ function gether_checkbox(){
 		if(this.checked){
 			var row = $(this).parent("td").parent("tr");//获取当前行
 			var tds = $(row).find("td");
-			result.push({"name":$(tds[1]).html(), "id":$(this).val()});
+			result.push({"name":$(this).val()});
 		}
 		
 	})
@@ -161,7 +162,7 @@ function getAccount(_id) {
                 var parent = document.getElementById(_id);
                 clearOption(parent);
                 var opt=document.createElement("option");
-                opt.text = " choose a exchage";
+                opt.text = " choose exchage";
                 opt.value = " ";
                 parent.options.add(opt);
                 var res = Object.keys(response);
