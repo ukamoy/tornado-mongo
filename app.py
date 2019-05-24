@@ -130,43 +130,12 @@ class strategy(BaseHandler):
             self.db_client.insert_one("strategy", stgs)
         self.redirect("/dashboard")
 
-# class waitlist(BaseHandler):
-#     @tornado.web.authenticated
-#     def get(self):
-#         current_user = self.get_current_user()
-#         qry = {"name":current_user["name"]}
-#         r = self.db_client.query_one("user",qry)
-#         if r:
-#             qry = {"_id":{"$in":mongo_obj(r["waitlist"])}}
-#             json_obj = self.db_client.query("strategy",qry,[('_id', -1)])
-#         else:
-#             json_obj = {}
-#         self.render("waitlist.html", title = "waitlist",data = json_obj)
-
-#     def post(self):
-#         current_user = self.get_current_user()
-#         flt = {"name":current_user["name"]}
-#         r = self.db_client.query_one("user",flt)
-#         waitlist = []
-#         if r:
-#             waitlist = r["waitlist"]
-#         if self.get_argument('delete',None):
-#             tmp = self.get_argument('delete')
-#             waitlist.remove(self.get_argument('delete'))
-#         elif self.get_argument('strategy_ids', None):
-#             items = json.loads(self.get_argument('strategy_ids'))
-#             for item in items:
-#                 waitlist.append(item["id"])
-#         qry= {"waitlist":list(set(waitlist))}
-#         self.db_client.update_one("user",flt, qry)
-#         self.redirect("/dashboard")
-
 class task_sheet(BaseHandler):
     @tornado.web.authenticated
     def get(self, *args, **kwargs):
         current_user = self.get_current_user()
         if not args[0]=="all":
-            self.db_client.update_one("tasks",{"_id":ObjectId(args[0])},{"status":"cancelled"})
+            self.db_client.update_one("tasks",{"_id":ObjectId(args[0])},{"status":"withdrawn"})
             #self.redirect("/dashboard/task_sheet/all")
         qry = {"Author":current_user["name"]}
         json_obj = self.db_client.query("tasks",qry,[('_id', -1)])
@@ -185,7 +154,6 @@ class task_sheet(BaseHandler):
         
         self.db_client.insert_one("tasks", args)
         dingding("deploy",f"{current_user['name']} submitted a task")
-        # self.db_client.update_one("user",{"name":current_user["name"]},{"waitlist":[]})
         self.redirect("/dashboard/task_sheet/all")
 
 class deploy(BaseHandler):
@@ -211,7 +179,6 @@ class deploy(BaseHandler):
         current_user = self.get_current_user()
         task = self.db_client.query_one("tasks",{"_id":ObjectId(_id)})
         dingding("deploy", f"{task['Author']}'s task: {task['task_id']}  {method}")
-
 
 class assignment(BaseHandler):
     @tornado.web.authenticated
@@ -276,6 +243,7 @@ class server(BaseHandler):
     
     def post(self):
         branch = self.get_argument("branch")
+        json_obj = self.db_client.query("server",{},[('_id', -1)])
         server_ips = json.loads(self.get_argument("server_ips"))
         server_history = {}
         msg = f"update vnpy to {branch}\n"
@@ -283,11 +251,11 @@ class server(BaseHandler):
             c = Connection(f"dayu@{server['id']}", connect_kwargs = {"password":"Xinger520"})
             USER_HOME = "/home/dayu"
             with c.cd(f"{USER_HOME}/Documents/vnpy_fxdayu"):
-                # c.run(f"yes | {USER_HOME}/anaconda3/bin/pip uninstall vnpy_fxdayu")
+                c.run(f"yes | {USER_HOME}/anaconda3/bin/pip uninstall vnpy_fxdayu")
                 c.run(f"git pull origin {branch}")
                 c.run(f"git checkout {branch}")
                 
-                # c.run(f"{USER_HOME}/anaconda3/bin/python -E setup.py install")
+                c.run(f"{USER_HOME}/anaconda3/bin/python -E setup.py install")
                 cmd_rtn = c.run("git reflog")
                 ref_tag = cmd_rtn.stdout.split("\n")[0].split(" ")[0]
                 msg += f"> 服务器 {server['name']} 已经更新到了 {ref_tag} 版本 \n\n"
@@ -295,8 +263,31 @@ class server(BaseHandler):
 
         for k,v in server_history.items():
             self.db_client.update_one("server",{"server_name":k},{"history":v})
-            dingding("deploy",msg)
+        dingding("deploy",msg)
         self.redirect("/deploy/server")
+class ding(BaseHandler):
+    @tornado.web.authenticated
+    def get(self,*args,**kwargs):
+        if self.get_argument("method", None):
+            qry = self.get_argument("method")
+            json_obj={} if qry=="new" else self.db_client.query("ding",{})
+            self.render("ding.html",title = "DINGDING",data = json_obj,edit=None)
+        else:
+            qry = self.get_argument("name")
+            json_obj= self.db_client.query_one("ding",{"name":qry})
+            self.render("ding.html",title = "DINGDING",data = {},edit=json_obj)
+
+    def post(self,*args,**kwargs):
+        if self.get_argument("delete",None):
+            self.db_client.delete_one("ding",{"name":self.get_argument("delete")})
+        else:
+            old_name=self.get_argument("old_name",None)
+            qry = {
+                "name":self.get_argument("ding_name",None),
+                "token":self.get_argument("ding_token",None)
+                }
+            self.db_client.update_one("ding",{"name":old_name},qry)
+        self.redirect("/ding?method=all")
 
 class MainHandler(BaseHandler):
     @tornado.web.authenticated
@@ -308,6 +299,9 @@ class MainHandler(BaseHandler):
         elif self.get_argument("checkUser", None):
             qry = self.get_argument("checkUser")
             r = self.db_client.query_one("user",{"name":qry})
+        elif self.get_argument("checkDing", None):
+            qry = self.get_argument("checkDing")
+            r = self.db_client.query_one("ding",{"name":qry})
         elif self.get_argument("task_id", None):
             t = self.get_argument("task_id")
             n = self.get_argument("stg_name")
@@ -337,7 +331,6 @@ application = tornado.web.Application([
     (r"/", home), 
     (r"/dashboard", dashboard), 
     (r"/dashboard/strategy/([a-zA-Z0-9]+)", strategy), 
-    # (r"/dashboard/waitlist", waitlist), 
     (r"/dashboard/task_sheet/([a-zA-Z0-9]+)", task_sheet), 
     (r"/deploy/list/(all|todo|work)", deploy),
     (r"/deploy/assignment/([a-zA-Z0-9]+)", assignment),
@@ -345,6 +338,7 @@ application = tornado.web.Application([
     (r"/query_order", query_order),
     (r"/strategy_performance", strategy_performance),
     (r"/dy", MainHandler), 
+    (r"/ding", ding), 
 ],**settings)
 
 if __name__ == "__main__":

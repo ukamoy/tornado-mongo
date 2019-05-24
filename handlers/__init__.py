@@ -22,7 +22,6 @@ class BaseHandler(tornado.web.RequestHandler):
             return self._member_db_map(member)
         else:
             return {}
-        print()
 
     def get_user(self, uid=None, name=None):
         print(uid,name)

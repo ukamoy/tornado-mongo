@@ -44,12 +44,15 @@ $(function(){
 // 			$(this).prop("checked", false);
 // 		});
 // 		alert("added to waitlist");
+//        var link=location.href.substring(location.href.indexOf("?")+1);
+//       var ding_name = link.split("=")[1];
+//        $.post("/ding?delete="+ding_name);
 // }
 
-function remove_from_waitlist(obj){
+function remove_row(obj){
 	var tr = obj.parentNode.parentNode;
-	var tds = $(tr).find("td");
-	$.post("/dashboard/waitlist", {delete:$(tds[0]).html()});
+    var tds = $(tr).find("td");
+	$.post("/ding?delete="+obj.name);
 	tr.parentNode.removeChild(tr);
 }
 function process_task(obj){
@@ -93,7 +96,7 @@ function gether_checkbox(){
 		if(this.checked){
 			var row = $(this).parent("td").parent("tr");//获取当前行
 			var tds = $(row).find("td");
-			result.push({"name":$(this).val()});
+			result.push({"name":$(this).val(),"id":$(tds[2]).html()});
 		}
 		
 	})
@@ -126,6 +129,33 @@ function check_name(){
         $("#nametip").html('');
     }
 }
+function check_ding(){
+    var originName = $.trim($("input[name='ding_name']").val());
+    if(originName){
+        $.ajax({
+            url:"/dy",
+            type: "GET",
+            dataType:"json",
+            data: {"checkDing":originName},
+            success:function(response){
+                if(response){
+                    $("input[name='name']").css({"color":'red'});
+                    document.getElementById("nametip").className ="prompt_alert";
+                    $("#nametip").html('该名称不可用');
+                    $("#submitbutton").attr({"disabled":"disabled"});
+                }else{
+                    $("input[name='name']").css({"color":'green'});
+                    document.getElementById("nametip").className ="prompt";
+                    $("#nametip").html('该名称可用');
+                    document.getElementById("submitbutton").disabled=false;
+                }
+            },
+        });
+    }
+    else{
+        $("#nametip").html('名称必填');
+    }
+}
 
 function check_user(){
     var originName = $.trim($("input[name='name']").val());
@@ -138,10 +168,11 @@ function check_user(){
             success:function(response){
                 if(response){
                     $("input[name='name']").css({"color":'red'});
-                    $("#nametip").class('alert');
+                    document.getElementById("nametip").className ="prompt_alert";
                     $("#nametip").html('该用户名已经被使用');
                 }else{
                     $("input[name='name']").css({"color":'green'});
+                    document.getElementById("nametip").className ="prompt";
                     $("#nametip").html('该用户名可用');
                 }
             },
@@ -235,7 +266,6 @@ function removeSymbolRow(obj){
     var add_item = obj.parentNode;
     var nodeFather = obj.parentNode.parentNode;
     nodeFather.removeChild(add_item); 
-    
 }
 
 function checkform(){
@@ -243,4 +273,33 @@ function checkform(){
         alert('该策略名已经被使用');
         return;
     };
+}
+
+function deploy_progress(){
+    //获取浏览器页面可见高度和宽度
+    var _PageHeight = document.documentElement.clientHeight,
+        _PageWidth = document.documentElement.clientWidth;
+    //计算loading框距离顶部和左部的距离（loading框的宽度为215px，高度为61px）
+    var _LoadingTop = _PageHeight > 61 ? (_PageHeight - 61) / 2 : 0,
+        _LoadingLeft = _PageWidth > 215 ? (_PageWidth - 215) / 2 : 0;
+    //在页面未加载完毕之前显示的loading Html自定义内容
+    var _LoadingHtml = '<div id="loadingDiv" style="position:absolute;left:0;width:100%;height:' + _PageHeight + 'px;top:0;background:#f3f8ff;opacity:1;filter:alpha(opacity=80);z-index:10000;"><div style="position: absolute; cursor1: wait; left: ' + _LoadingLeft + 'px; top:' + _LoadingTop + 'px; width: auto; height: 57px; line-height: 57px; padding-left: 50px; padding-right: 5px; background: #fff url(loadding.gif) no-repeat scroll 5px 10px; border: 2px solid #95B8E7; color: #696969; font-family:\'Microsoft YaHei\';">策略部署中，请等待...</div></div>';
+    //呈现loading效果
+    document.write(_LoadingHtml);
+
+    //window.onload = function () {
+    //    var loadingMask = document.getElementById('loadingDiv');
+    //    loadingMask.parentNode.removeChild(loadingMask);
+    //};
+
+    //监听加载状态改变
+    document.onreadystatechange = completeLoading;
+
+    //加载状态为complete时移除loading效果
+    function completeLoading() {
+        if (document.readyState == "complete") {
+            var loadingMask = document.getElementById('loadingDiv');
+            loadingMask.parentNode.removeChild(loadingMask);
+        }
+    }
 }

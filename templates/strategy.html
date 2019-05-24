@@ -41,8 +41,8 @@ function load(){
                     <label>Strategy Name</label>
                         <span class="field">
                         {% if data %}
-                            <input type="text" name="name" class="form-control" value="{{data['name']}}" onblur="check_name()" required>
-                            <span id="nametip" class="prompt"></span>
+                            <span class="form-control">{{data['name']}}</span>
+                            <input type="hidden" name="name" value="{{data['name']}}">
                         {% else %}
                             <input type="text" name="name" class="form-control" placeholder="Strategy Name (Max Length = 13)" onblur="check_name()" required>
                             <span id="nametip" class="prompt"></span>
@@ -143,8 +143,11 @@ function load(){
                 </p>
                 {% if data %}
                     <input type="hidden" id = "hidTD" name = "_id" value = "{{data['_id']}}">
+                    <button class="btn btn-lg btn-primary btn-block" type="submit" id="submitbutton">Submit</button>
+                {%else%}
+                    <button class="btn btn-lg btn-primary btn-block" type="submit" id="submitbutton" disabled="disabled">Submit</button>
                 {% end %}
-                <button class="btn btn-lg btn-primary btn-block" type="submit" id="submitbutton">Submit</button>
+                
             </form>
         </div>
     </div>
