@@ -6,11 +6,11 @@
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>{{ title }}</title>
       <link rel="bookmark" type="image/x-icon" href="static/favicon.ico" mce_href="static/favicon.ico"/>
-      <link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
-      <link href="https://v3.bootcss.com/dist/css/bootstrap-theme.min.css" rel="stylesheet">
-      <link href="https://v3.bootcss.com/examples/theme/theme.css" rel="stylesheet">
+      <link href="{{static_url('css/bootstrap.min.css')}}" rel="stylesheet">
+      <link href="{{static_url('css/bootstrap-theme.min.css')}}" rel="stylesheet">
+      <link href="{{static_url('css/theme.css')}}" rel="stylesheet">
       <script src="{{static_url('js/jquery-3.3.1.min.js')}}" ></script>
-      <script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script> 
+      <script src="{{static_url('js/bootstrap.min.js')}}"></script> 
       <link rel="stylesheet" type="text/css" href="{{static_url('css/dashboard.css')}}" rel="stylesheet">
       <script type="text/javascript" charset="utf-8" language="javascript" src="{{static_url('js/dashboard.js')}}"></script>
       {% block head %}{% end %}
