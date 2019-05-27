@@ -93,3 +93,10 @@ body {
   font-size: 14px;
   color:red;
 }
+
+.pos {
+  position: relative;
+  font-size: 10px;
+  width: 20px;
+  margin-left: 10px;
+}
