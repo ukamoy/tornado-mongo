@@ -1,5 +1,6 @@
 import tornado.ioloop
 import tornado.web
+import tornado.websocket
 # from tornado.options import define,options,parse_command_line
 from fabric import Connection
 import os,json,traceback,re
@@ -306,8 +307,44 @@ class MainHandler(BaseHandler):
         else:
             msg = False
         self.finish(json.dumps(msg))
+
+class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
+    users = set()  # 用来存放在线用户的容器
+    def open(self):
+        self.users.add(self)  # 建立连接后添加用户到容器中
+        for strategy,pos in self.pos_dict:
+            self.on_message(json.dumps({"_name":f"long-{strategy}","_val":pos[0]}))
+            self.on_message(json.dumps({"_name":f"short-{strategy}","_val":pos[1]}))
+
+    def on_close(self):
+        self.users.remove(self) # 用户关闭连接后从容器中移除用户
+    
+    def on_message(self, message):
+        for u in self.users:  # 向在线用户广播消息
+            u.write_message(message)
+
     def post(self,*args,**kwargs):
         print("conn post\n",args, self.request.__dict__)
+        if self.get_argument("orders", None):
+            orders = self.get_argument("orders")
+            self.db_client.insert_many("orders",orders)
+            for order in orders:
+                strategy,direction,vol = order["strategy"],order["type"],order["size"]
+                pos_long,pos_short = self.pos_dict[strategy]
+
+                if direction =="1":
+                    pos_long += vol
+                elif direction =="2":
+                    pos_short += vol
+                elif direction =="3":
+                    pos_long -= vol
+                elif direction =="4":
+                    pos_short -= vol
+
+                self.on_message(json.dumps({"_name":f"long-{strategy}","_val":pos_long}))
+                self.on_message(json.dumps({"_name":f"short-{strategy}","_val":pos_short}))
+                self.pos_dict[strategy] = [pos_long,pos_short]
+
 #---------------------------------------------------------------------
 
 settings = {
@@ -328,6 +365,7 @@ application = tornado.web.Application([
     (r"/chart/([a-zA-Z0-9]+)", strategy_performance),
     (r"/dy", MainHandler), 
     (r"/ding", ding), 
+    (r"/pos", posHandler)
 ],**settings)
 
 if __name__ == "__main__":

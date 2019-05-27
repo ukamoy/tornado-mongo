@@ -8,13 +8,17 @@ class BaseHandler(tornado.web.RequestHandler):
         self.db_client = db_client()
         
         json_obj = self.db_client.query("exchange",{})
-        ex_list = list(set(map(lambda x: x["name"],json_obj)))
-        self.ac_dict = {}
-        for x in sorted(ex_list):
-            for ex in json_obj:
-                if ex["name"] == x:
-                    self.ac_dict.update({x:[ex["keys"],ex["symbols"]]})
+        json_obj2 = self.db_client.query("orders",{})
 
+        self.ac_dict = {}
+        for ex in json_obj:
+            self.ac_dict.update({ex["name"]:[ex["keys"],ex["symbols"]]})
+        
+        stg_list = list(map(lambda x: x["name"],json_obj2))
+        self.pos_dict={}
+        for stg in stg_list:
+            self.pos_dict.update({stg:[0,0]})
+        
     def get_current_user(self):
         # For read only
         member = self.db_client.query_one("user", {"auth": self.get_cookie('auth')})
@@ -24,7 +28,6 @@ class BaseHandler(tornado.web.RequestHandler):
             return {}
 
     def get_user(self, uid=None, name=None):
-        print(uid,name)
         if uid:
             return self._member_db_map(self.db_client.query_one("user",{"uid":int(uid)}))
         elif name:
