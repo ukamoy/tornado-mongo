@@ -4,13 +4,14 @@ import tornado.web
 from fabric import Connection
 import os,json,traceback,re
 from datetime import datetime
-from dayu.performance import run, get_stg_list
+from dayu.performance import run
 from dayu.queryorder import query
 from handlers import BaseHandler
 from dayu.util.user import Member
 from dayu.util.db_conn import db_client
 from bson.objectid import ObjectId
 from dayu.util.ding import dingding
+from dayu.write_settings import update_repo, prepare_stg_files, cp_files
 
 def mongo_obj(id_list):
     ids = []
@@ -27,10 +28,10 @@ class home(BaseHandler):
             self.render("index.html", title = "DAYU SYS", msg=None)
     
     def post(self):
-        post_values = ['name','pwd']
-        args = {}
-        for v in post_values:
-            args[v] = self.get_argument(v, None)
+        args = {
+            "name":self.get_argument("name",None),
+            "pwd":self.get_argument("pwd",None)
+        }
 
         try:
             member = Member()
@@ -45,19 +46,14 @@ class home(BaseHandler):
 
 class strategy_performance(BaseHandler):
     @tornado.web.authenticated
-    def get(self):
-        query = {"state":{"$in":["-1","2"]}}
-        stg_list = get_stg_list(query)
-        self.render("performance.html", title = "DAYU", items=stg_list)
-    
-    def post(self):
-        strategy=self.get_argument("strategy_name")
+    def get(self,*args,**kwargs):
+        strategy = args[0]
         db_query = {"strategy":strategy,"state":{"$in":["-1","2"]}}
         try:
             result = run(db_query)
         except:
-            result = "STARTEGY NAME ERROR"
-        self.render("performance.html", title = strategy, items = result)
+            result = {}
+        self.render("chart.html", title = strategy, data = result)
 
 class query_order(BaseHandler):
     @tornado.web.authenticated
@@ -99,24 +95,20 @@ class strategy(BaseHandler):
         for v in post_values:
             stgs[v] = self.get_body_arguments(v, None)
 
-        stg_set = self.get_argument('strategy_setting', {})
-        stgs["strategy_setting"] = eval(stg_set)
-        stgs["git_path"] = self.get_argument('git_path', None)
-        stgs["name"] = self.get_argument('name', None)
-        stgs["strategy_class_name"] = self.get_argument('strategy_class_name', None)
-
-        sym_list = []
-        for ex,ac,sym in zip(stgs["assist_symbols_ex"],stgs["assist_symbols_ac"],stgs["assist_symbols"]):
-            sym_list.append(f"{sym}:{ex}_{ac}")
-        stgs["tradeSymbolList"] = []
-        for ex,ac,sym in zip(stgs["trade_symbols_ex"],stgs["trade_symbols_ac"],stgs["trade_symbols"]):
-            stgs["tradeSymbolList"].append(f"{sym}:{ex}_{ac}")
+        sym_list = list(map(lambda x: f"{x['assist_symbols']}:{x['assist_symbols_ex']}_{x['assist_symbols_ac']}", stgs))
+        stgs["tradeSymbolList"] = list(map(lambda x: f"{x['trade_symbols']}:{x['trade_symbols_ex']}_{x['trade_symbols_ac']}", stgs))
         
         for symbol in list(sym_list):
             if symbol in stgs["tradeSymbolList"]:
                 sym_list.remove(symbol)
             
-        stgs["symbolList"] =stgs["tradeSymbolList"] + sym_list
+        stgs["symbolList"] = stgs["tradeSymbolList"] + sym_list
+        
+        stg_set = self.get_argument('strategy_setting', {})
+        stgs["strategy_setting"] = eval(stg_set)
+        stgs["git_path"] = self.get_argument('git_path', None)
+        stgs["name"] = self.get_argument('name', None)
+        stgs["strategy_class_name"] = self.get_argument('strategy_class_name', None)
 
         if self.get_argument("_id", None):
             flt={"_id":ObjectId(self.get_argument("_id"))}
@@ -136,7 +128,8 @@ class task_sheet(BaseHandler):
         current_user = self.get_current_user()
         if not args[0]=="all":
             self.db_client.update_one("tasks",{"_id":ObjectId(args[0])},{"status":"withdrawn"})
-            #self.redirect("/dashboard/task_sheet/all")
+            dingding("deploy",f"{current_user['name']} withdrawn a task")
+
         qry = {"Author":current_user["name"]}
         json_obj = self.db_client.query("tasks",qry,[('_id', -1)])
         self.render("task_sheet.html", title = "Task List", data = json_obj)
@@ -153,7 +146,7 @@ class task_sheet(BaseHandler):
         args["strategies"] = list(map(lambda x: x["name"],stgs))
         
         self.db_client.insert_one("tasks", args)
-        dingding("deploy",f"{current_user['name']} submitted a task")
+        dingding("deploy",f"{current_user['name']} submitted a task \nid: {task_id}")
         self.redirect("/dashboard/task_sheet/all")
 
 class deploy(BaseHandler):
@@ -176,7 +169,6 @@ class deploy(BaseHandler):
         _id = self.get_argument('id')
         
         self.db_client.update_one("tasks",{"_id":ObjectId(_id)},{"status":method})
-        current_user = self.get_current_user()
         task = self.db_client.query_one("tasks",{"_id":ObjectId(_id)})
         dingding("deploy", f"{task['Author']}'s task: {task['task_id']}  {method}")
 
@@ -213,14 +205,12 @@ class assignment(BaseHandler):
         servers = self.db_client.query("server",{"server_name":{"$in":server_names}})
         
         key_chain = {}
-        key_list = []
-        for item in json_obj:
-            key_list+=(item['trade_symbols_ac'] + item['assist_symbols_ac'])
+        key_list = list(map(lambda x: x['trade_symbols_ac']+x['assist_symbols_ac'], json_obj))
         keys = self.db_client.query("account",{"name":{"$in":list(set(key_list))}})
+
         for key in keys:
             key_chain.update({key["name"]:[key["apikey"],key["secretkey"],key["passphrase"]]})
         
-        from dayu.write_settings import update_repo, prepare_stg_files, cp_files
         msg = update_repo()
         prepare_stg_files(json_obj, task_id, key_chain)
 
@@ -229,7 +219,6 @@ class assignment(BaseHandler):
             msg += cp_files(c, server['server_name'], task_id)
 
         return msg
-
 
 class server(BaseHandler):
     @tornado.web.authenticated
@@ -243,7 +232,6 @@ class server(BaseHandler):
     
     def post(self):
         branch = self.get_argument("branch")
-        json_obj = self.db_client.query("server",{},[('_id', -1)])
         server_ips = json.loads(self.get_argument("server_ips"))
         server_history = {}
         msg = f"update vnpy to {branch}\n"
@@ -265,6 +253,7 @@ class server(BaseHandler):
             self.db_client.update_one("server",{"server_name":k},{"history":v})
         dingding("deploy",msg)
         self.redirect("/deploy/server")
+
 class ding(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
@@ -336,7 +325,7 @@ application = tornado.web.Application([
     (r"/deploy/assignment/([a-zA-Z0-9]+)", assignment),
     (r"/deploy/server", server),
     (r"/query_order", query_order),
-    (r"/strategy_performance", strategy_performance),
+    (r"/chart/([a-zA-Z0-9]+)", strategy_performance),
     (r"/dy", MainHandler), 
     (r"/ding", ding), 
 ],**settings)

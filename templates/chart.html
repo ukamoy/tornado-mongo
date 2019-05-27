@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block head %}
+<title>{{ title }} Performance</title>
+<link href="{{static_url('css/table.css')}}" rel="stylesheet">
+<script type="text/javascript">
+   function GoBackward(){
+   window.history.back();
+   }
+</script>
+{% end %}
+{% block body %}
+<div class="pageContainer">
+   {% include "admin_nav.html" %}
+   <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+      {%if data%}
+         <ul>
+         {% for strategy, item in data.items() %}
+            <br>
+            {{strategy}}<br>
+            {{item["symbol"]}}
+            <li>trade_count: {{item["trade_count"] }}</li>
+            <li>profit_loss: {{item["profit_loss"] }}</li>
+            <li>fee: {{item["fee"] }}</li>
+            <li>position_profit: {{item["position_profit"] }}</li>
+            <li>net_profit: {{item["net_profit"] }}</li>
+            <li>holding: long: {{item["holding_long"] }} short: {{item["holding_short"] }}</li>
+            {%if item["missing_open"]%}
+               <li>missing_open:{{item["missing_open"]}}</li>
+            {%end%}
+         </ul>
+         <img src = {{static_url(f"image/{item['img']}")}} class="img-responsive">
+         {% end %}
+      {% else %}
+         no data
+      {% end %}
+      
+      <button type="button" class="btn btn-sm btn-primary" onclick="GoBackward()">Go Back</button>
+{%end%}
