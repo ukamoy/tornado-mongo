@@ -27,7 +27,7 @@ def query(account_name,symbol,state="",oid=""):
         path = f'/api/futures/v3/orders/{symbol}/{oid}'
     elif state and not oid:
         path = f'/api/futures/v3/orders/{symbol}'
-        params={"state":7,"instrument_id":symbol,"limit":100}
+        params={"state":state,"instrument_id":symbol,"limit":100}
         path = path+"?"+urlencode(params)
     else:
         return {}

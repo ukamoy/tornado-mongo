@@ -303,7 +303,7 @@ class ding(BaseHandler):
 class MainHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
-        print("conn get\n",args, self.request["body_arguments"])
+        print("conn get\n",args, self.request.__dict__["arguments"], "body:", self.request.__dict__["body_arguments"])
         if self.get_argument("checkName", None):
             qry = filter_name(self.get_argument("checkName"))
             r = self.db_client.query_one("strategy",{"alias":qry})
@@ -349,7 +349,7 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
             u.write_message(message)
 
     def post(self,*args,**kwargs):
-        print("pos post\n", args, self.request["body_arguments"])
+        print("pos post\n", args, self.request.__dict__["arguments"], "body:", self.request.__dict__["body_arguments"])
         if self.get_argument("orders", None):
             orders = json.loads(self.get_argument("orders"))
             self.db_client.insert_many("orders",orders)
@@ -369,8 +369,7 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
                 self.on_message(json.dumps({"_name":f"long-{strategy}","_val":pos_long}))
                 self.on_message(json.dumps({"_name":f"short-{strategy}","_val":pos_short}))
                 self.pos_dict[strategy] = [pos_long,pos_short]
-            for stg,pos in self.pos_dict.items():
-                self.db_client.update_one("pos",{"name":stg},{"name":stg,"long":pos[0],"short":pos[1]})
+                self.db_client.update_one("pos",{"name":strategy},{"name":strategy,"long":pos_long,"short":pos_short})
 
 #---------------------------------------------------------------------
 

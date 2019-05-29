@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 {% block head %}
 <title>{{ title }}</title>
-<link href="{{static_url("css/table.css")}}" rel="stylesheet">
+<link href="{{static_url('css/table.css')}}" rel="stylesheet">
 
 {% end %}
 {% block body %}
 <div class="container-fluid">
     <div class="main">
+            <div style="margin-top: 10px">
     {%if item%}
     <h2 class="sub-header">Orders</h2>
 
@@ -46,16 +47,22 @@
     </div>
     {%else%}
 
-    <form action="/query_order" method="post"  class="form-signin">
+    <form  class="stdform stdform2" action="/query_order" method="post"  class="form-signin">
     <h2 class="form-signin-heading">Query Orders</h2>
-    account  : OKEX_<input type="text" name="ac_name"><br><br>
-    symbol   : <input type="text" name="symbol"><br><br>
-    status    : <input type="text" name="state" placeholder="(omit if query specific order)"><br><br>
-    oid | id : <input type="text" name="oid" placeholder="(omit if query by order status)"><br><br>
+    account  : OKEX_<input type="text" class="form-control" name="ac_name"><br><br>
+    symbol   : <input type="text" class="form-control" name="symbol"><br><br>
+    status    : <select name="state" class="form-select-combine">
+                <option>(omit if query specific order)</option>
+                <option value="6">未完成单</option>
+                <option value="2">成交单</option>
+                <option value="-2">拒单</option>
+                <option value="-1">撤销单</option>
+                </select><br><br>
+    oid | id : <input type="text" class="form-control" name="oid" placeholder="(omit if query by order status)"><br><br>
     <button type="submit" class="btn btn-sm btn-primary">Look Up</button>
     </form>
 
     {% end %}
-    </div>
+    </div></div>
 </div>
 {% end %}
