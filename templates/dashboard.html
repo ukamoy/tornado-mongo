@@ -38,7 +38,7 @@
                             <td><a href = "/dashboard/strategy/{{d['_id']}}">{{d["name"]}}</a></td>
                             <td class="center">{{d["server"]}}</td>
                             <td>
-                                {%for sym in d['trade_symbols']%}
+                                {%for sym in d['tradeSymbolList']%}
                                 <div>
                                     <span style="font-size:12px">{{sym}}</span><br>
                                     <span class="label label-success" id="long-{{d['alias']}}"></span>

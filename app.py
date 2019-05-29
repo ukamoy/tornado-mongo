@@ -64,12 +64,11 @@ class strategy_performance(BaseHandler):
 class orders(BaseHandler):
     @tornado.web.authenticated
     def get(self):
+        r=""
         if self.get_argument("name",None):
-            r=[]
-        else:
-            r=""
-        print(r,"-------")
-        self.render("query.html", title = "FIND ORDERS", data=r)
+            qry={"strategy":self.get_argument("name")}
+            r=self.db_client.query("orders",qry,[('_id', -1)])
+        self.render("orders.html", title = "FIND ORDERS", data=r)
     
     def post(self):
         ac=self.get_argument("ac_name")
@@ -86,15 +85,14 @@ class orders(BaseHandler):
                     result=[r]
         except:
             pass
-        self.render("query.html", title = "FIND ORDERS", data = result)
+        self.render("orders.html", title = "FIND ORDERS", data = result)
 
 class dashboard(BaseHandler):
     @tornado.web.authenticated
     def get(self):
         current_user = self.get_current_user()
-        if current_user["group"] == "zeus":
-            qry = {}
-        else:
+        qry = {}
+        if not current_user["group"] == "zeus":
             qry = {"Author":current_user["name"]}
         json_obj = self.db_client.query("strategy",qry,[('_id', -1)])
         self.render("dashboard.html", title = "DASHBOARD", data = json_obj)
@@ -165,11 +163,12 @@ class task_sheet(BaseHandler):
         task_id = datetime.now().strftime("%Y%m%d%H%M%S")
         stgs = json.loads(self.get_argument('strategies'))
 
-        args = {}
-        args["task_id"] = task_id 
-        args["Author"] = current_user["name"]
-        args["status"] = "submitted"
-        args["strategies"] = list(map(lambda x: x["name"],stgs))
+        args = {
+            "task_id" : task_id,
+            "Author" : current_user["name"],
+            "status" : "submitted",
+            "strategies" : list(map(lambda x: x["name"],stgs))
+            }
         
         self.db_client.insert_one("tasks", args)
         dingding("deploy",f"{current_user['name']} submitted a task \nid: {task_id}")
@@ -205,7 +204,6 @@ class assignment(BaseHandler):
         if not current_user["group"] == "zeus":
             return self.redirect("/dashboard")
         task = self.db_client.query_one("tasks",{"_id":ObjectId(args[0])})
-        print(task,args)
         stgs = task["strategies"]
         json_obj = self.db_client.query("strategy",{"name":{"$in":stgs}}) 
         servers = self.db_client.query("server",{},[('_id', -1)])
@@ -330,10 +328,8 @@ class MainHandler(BaseHandler):
         elif self.get_argument("getAccount", None):
             self.finish(self.ac_dict)
             return
-        elif self.get_argument("orders", None):
-            r=json.loads(self.get_argument("orders"))
-            print(r)
-            return
+        else:
+            r=[]
         if r:
             msg = True
         else:
