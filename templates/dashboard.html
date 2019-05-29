@@ -48,7 +48,7 @@
                             </td>
                             <td><a class="btn btn-sm btn-primary" href = "/chart/{{d['alias']}}">Chart</a>
                                 &nbsp;<a class="btn btn-sm btn-primary" href = "http://149.28.78.5:5601/app/kibana#/discover?_g=()&_a=(columns:!(_source),filters:!(('$state':(store:appState),meta:(alias:!n,disabled:!f,index:'0c5c9850-7e27-11e9-95ef-03925e1df000',key:message,negate:!f,params:!({{d['name']}}),type:phrases,value:{{d['name']}}),query:(bool:(minimum_should_match:1,should:!((match_phrase:(message:{{d['name']}}))))))),index:'0c5c9850-7e27-11e9-95ef-03925e1df000',interval:auto,query:(language:lucene,query:''),sort:!('@timestamp',desc))" target="_blank">Log</a>
-                                &nbsp;<a class="btn btn-sm btn-primary" href = "/orders/{{d['alias']}}">Orders</a>
+                                &nbsp;<a class="btn btn-sm btn-primary" href = "/orders?name={{d['alias']}}">Orders</a>
                             </td>
 
                             <td class="center">{{d["updatetime"]}}</td>

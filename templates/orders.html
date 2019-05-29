@@ -1,45 +1,88 @@
 {% extends "base.html" %}
 {% block head %}
+<title>{{ title }}</title>
+<link href="{{static_url('css/table.css')}}" rel="stylesheet">
+
 {% end %}
 {% block body %}
 <div class="container-fluid">
     <div class="main">
-        <h2 class="sub-header">DEPLOYMENT</h2>
-        <div class="table-responsive" style="margin-top: 10px">
-            <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="strategy_list">
-                <thead>
-                    <tr>
-                        <th style="display:none"></th>
-                        <th>Task ID</th>
-                        <th>Status</th>
-                        <th>Operation</th>
-                        <th>Strategy List</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for d in data %}
-                    <tr class="odd gradeX">
-                        <td style="display:none">{{d["_id"]}}</td>
-                        <td><a href="/deploy/assignment/{{d['_id']}}">{{d["task_id"]}}</a></td>
-                        <td id = "{{d['_id']}}">{{d["status"]}}</td>
-                        <td id = "link{{d['_id']}}">
-                            {%if d["status"] == 'submitted' %}
-                                <a class="btn btn-sm btn-primary" href="javascript:;" onclick = "process_task(this)" name = "processing">P</a>   
-                                <a class="btn btn-sm btn-primary" href="javascript:;" onclick = "process_task(this)" name = "rejected">X</a>   
-                            {%elif d["status"] == 'assigned' %}
-                                <a class="btn btn-sm btn-primary" href="javascript:;" onclick = "process_task(this)" name = "rejected">X</a>
-                                <a class="btn btn-sm btn-primary" href="javascript:;" onclick = "process_task(this)" name = "completed">C</a>  
-                            {%else%}
-                                N/A
-                            {%end%}
-                        </td>
-                        <td>{{d["strategies"]}}</td>
-                    </tr>
-                    {% end %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+            <div style="margin-top: 10px">
+    {%if data%}
+    <h2 class="sub-header">Orders</h2>
 
+    <div class="table-responsive" style="margin-top: 10px">
+        <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>datetime</th>
+                    <th>symbol</th>
+                    <th>type</th>
+                    <th>price</th>
+                    <th>volume</th>
+                    <th>ordered price</th>
+                    <th>ordered Vol</th>
+                    <th>status</th>
+                    <th>client_oid</th>
+                    <th>order id</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in data %}
+                <tr class="odd gradeX">
+                    <td>{{d["timestamp"]}}</td>
+                    <td>{{d["instrument_id"]}}</td>
+                    <td>{{d["type"]}}</td>
+                    <td>{{d["price_avg"]}}</td>
+                    <td>{{d["filled_qty"]}}</td>
+                    <td>{{d["price"]}}</td>
+                    <td>{{d["size"]}}</td>
+                    <td>{{d["state"]}}</td>
+                    <td>{{d["client_oid"]}}</td>
+                    <td>{{d["order_id"]}}</td>
+                </tr>
+                {% end %}
+            </tbody>
+        </table>
+    </div>
+    {%else%}
+
+    <form  class="stdform stdform2" action="/query_order" method="post"  class="form-signin">
+    <h2 class="form-signin-heading">Query Orders</h2>
+    <p>
+        <label>account</label>
+        <span class="field">
+            <input type="text" class="form-control" name="ac_name">
+        </span><!--field-->
+    </p>
+    <p>
+        <label>symbol</label>
+        <span class="field">
+            <input type="text" class="form-control" name="symbol">
+        </span><!--field-->
+    </p>
+    <p>
+        <label>status</label>
+        <span class="field">
+            <select name="state" class="form-control">
+                <option value="">(omit if query specific order)</option>
+                <option value="6">未完成单</option>
+                <option value="2">成交单</option>
+                <option value="-2">拒单</option>
+                <option value="-1">撤销单</option>
+            </select>
+        </span><!--field-->
+    </p>
+    <p>
+        <label>oid | id</label>
+        <span class="field">
+                <input type="text" class="form-control" name="oid" placeholder="(omit if query by order status)">
+        </span><!--field-->
+    </p>
+    <button type="submit" class="btn btn-sm btn-primary">Look Up</button>
+    </form>
+
+    {% end %}
+    </div></div>
+</div>
 {% end %}

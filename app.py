@@ -61,25 +61,32 @@ class strategy_performance(BaseHandler):
             result = {}
         self.render("chart.html", title = strategy, data = result)
 
-class query_order(BaseHandler):
+class orders(BaseHandler):
     @tornado.web.authenticated
     def get(self):
-        self.render("query.html", title = "FIND ORDERS",item = None)
+        if self.get_argument("name",None):
+            r=[]
+        else:
+            r=""
+        print(r,"-------")
+        self.render("query.html", title = "FIND ORDERS", data=r)
     
     def post(self):
         ac=self.get_argument("ac_name")
         symbol=self.get_argument("symbol")
         state = self.get_argument("state")
         oid=self.get_argument("oid")
+        result=[]
         try:
             r = query(ac, symbol, state, oid)
-            if r.get("result", None):
-                result=r["order_info"]
-            else:
-                result=[r]
+            if r:
+                if r.get("result", None):
+                    result=r["order_info"]
+                else:
+                    result=[r]
         except:
-            result = ""
-        self.render("query.html", title = "FIND ORDERS", item = result)
+            pass
+        self.render("query.html", title = "FIND ORDERS", data = result)
 
 class dashboard(BaseHandler):
     @tornado.web.authenticated
@@ -387,7 +394,7 @@ application = tornado.web.Application([
     (r"/deploy/list/(all|todo|work)", deploy),
     (r"/deploy/assignment/([a-zA-Z0-9]+)", assignment),
     (r"/deploy/server", server),
-    (r"/query_order", query_order),
+    (r"/orders", orders),
     (r"/chart/([a-zA-Z0-9]+)", strategy_performance),
     (r"/dy", MainHandler), 
     (r"/ding", ding), 
