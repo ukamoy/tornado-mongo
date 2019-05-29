@@ -5,15 +5,57 @@
 
 {% end %}
 {% block body %}
-{%if item%}
-RESULT: {{item}}
-{%else%}
-<form action="/query_order" method="post"  class="form-signin">
-<h2 class="form-signin-heading">Query Missing Order</h2>
-account  : OKEX_<input type="text" name="ac_name"><br><br>
-symbol   : <input type="text" name="symbol"><br><br>
-oid | id : <input type="text" name="oid"><br><br>
-<button type="submit" class="btn btn-sm btn-primary">Look Up</button>
-</form>
-{% end %}
+<div class="container-fluid">
+    <div class="main">
+    {%if item%}
+    <h2 class="sub-header">Orders</h2>
+
+    <div class="table-responsive" style="margin-top: 10px">
+        <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>datetime</th>
+                    <th>symbol</th>
+                    <th>type</th>
+                    <th>price</th>
+                    <th>volume</th>
+                    <th>ordered price</th>
+                    <th>ordered Vol</th>
+                    <th>status</th>
+                    <th>client_oid</th>
+                    <th>order id</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in item %}
+                <tr class="odd gradeX">
+                    <td>{{d["timestamp"]}}</td>
+                    <td>{{d["instrument_id"]}}</td>
+                    <td>{{d["type"]}}</td>
+                    <td>{{d["price_avg"]}}</td>
+                    <td>{{d["filled_qty"]}}</td>
+                    <td>{{d["price"]}}</td>
+                    <td>{{d["size"]}}</td>
+                    <td>{{d["state"]}}</td>
+                    <td>{{d["client_oid"]}}</td>
+                    <td>{{d["order_id"]}}</td>
+                </tr>
+                {% end %}
+            </tbody>
+        </table>
+    </div>
+    {%else%}
+
+    <form action="/query_order" method="post"  class="form-signin">
+    <h2 class="form-signin-heading">Query Orders</h2>
+    account  : OKEX_<input type="text" name="ac_name"><br><br>
+    symbol   : <input type="text" name="symbol"><br><br>
+    status    : <input type="text" name="state" placeholder="(omit if query specific order)"><br><br>
+    oid | id : <input type="text" name="oid" placeholder="(omit if query by order status)"><br><br>
+    <button type="submit" class="btn btn-sm btn-primary">Look Up</button>
+    </form>
+
+    {% end %}
+    </div>
+</div>
 {% end %}

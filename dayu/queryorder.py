@@ -20,10 +20,18 @@ def generateSignature(msg, apiSecret):
     mac = hmac.new(bytes(apiSecret, encoding='utf-8'), bytes(msg,encoding='utf-8'), digestmod='sha256')
     d= mac.digest()
     return base64.b64encode(d)
-def query(account_name,symbol,oid):
+def query(account_name,symbol,state="",oid=""):
     setting = find_key(account_name)
     timestamp = f"{datetime.utcnow().isoformat()[:-3]}Z"
-    path = f'/api/futures/v3/orders/{symbol}/{oid}'
+    if oid and not state:
+        path = f'/api/futures/v3/orders/{symbol}/{oid}'
+    elif state and not oid:
+        path = f'/api/futures/v3/orders/{symbol}'
+        params={"state":7,"instrument_id":symbol,"limit":100}
+        path = path+"?"+urlencode(params)
+    else:
+        return {}
+
     msg = f"{timestamp}GET{path}"
     signature = generateSignature(msg, setting["apiSecret"])
     headers = {

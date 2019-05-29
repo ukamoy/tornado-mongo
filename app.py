@@ -69,11 +69,16 @@ class query_order(BaseHandler):
     def post(self):
         ac=self.get_argument("ac_name")
         symbol=self.get_argument("symbol")
+        state = self.get_argument("state")
         oid=self.get_argument("oid")
         try:
-            result = query(ac, symbol, oid)
+            r = query(ac, symbol, state, oid)
+            if r.get("result", None):
+                result=r["order_info"]
+            else:
+                result=[r]
         except:
-            result = "ERROR"
+            result = ""
         self.render("query.html", title = "FIND ORDERS", item = result)
 
 class dashboard(BaseHandler):
@@ -298,7 +303,7 @@ class ding(BaseHandler):
 class MainHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
-        print("conn get\n",args, self.request.__dict__)
+        print("conn get\n",args, self.request["body_arguments"])
         if self.get_argument("checkName", None):
             qry = filter_name(self.get_argument("checkName"))
             r = self.db_client.query_one("strategy",{"alias":qry})
@@ -344,7 +349,7 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
             u.write_message(message)
 
     def post(self,*args,**kwargs):
-        print("conn post\n",args, self.request.__dict__)
+        print("pos post\n", args, self.request["body_arguments"])
         if self.get_argument("orders", None):
             orders = json.loads(self.get_argument("orders"))
             self.db_client.insert_many("orders",orders)
