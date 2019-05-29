@@ -23,6 +23,14 @@ function load(){
 <div class="container-fluid">
     <div class="main">
         <div style="margin-top: 10px">
+            <div style="text-align:right">
+                <h3>
+                    {% if data %}
+                        <span class="label label-md label-info">Created on: {{data['createtime']}}</span>
+                        <span class="label label-md label-info">Updated on: {{data['updatetime']}}</span>
+                    {% end %}
+                    <button type="button" class="btn btn-md btn-info" onclick="GoBackward()">Go Back</button>
+                </h3></div>
             <form class="stdform stdform2" action="/dashboard/strategy/save" method="post" id="form">
                 
                 <p>

@@ -8,16 +8,15 @@ class BaseHandler(tornado.web.RequestHandler):
         self.db_client = db_client()
         
         json_obj = self.db_client.query("exchange",{})
-        json_obj2 = self.db_client.query("orders",{})
+        json_obj2 = self.db_client.query("pos",{})
 
         self.ac_dict = {}
         for ex in json_obj:
             self.ac_dict.update({ex["name"]:[ex["keys"],ex["symbols"]]})
         
-        stg_list = list(map(lambda x: x["name"],json_obj2))
         self.pos_dict={}
-        for stg in stg_list:
-            self.pos_dict.update({stg:[0,0]})
+        for pos in json_obj2:
+            self.pos_dict.update({pos["name"]:[pos["long"],pos["short"]]})
         
     def get_current_user(self):
         # For read only

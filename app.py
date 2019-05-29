@@ -19,6 +19,11 @@ def mongo_obj(id_list):
     for id_ in id_list:
         ids.append(ObjectId(id_))
     return ids
+def filter_name(name):
+        alpha='abcdefghijklmnopqrstuvwxyz'
+        filter_text = "0123456789" + alpha + alpha.upper()
+        new_name = filter(lambda ch: ch in filter_text, name)
+        return ''.join(list(new_name))[:13]
 
 class home(BaseHandler):
     def get(self):
@@ -95,10 +100,15 @@ class strategy(BaseHandler):
         stgs = {}
         for v in post_values:
             stgs[v] = self.get_body_arguments(v, None)
-
-        sym_list = list(map(lambda x: f"{x['assist_symbols']}:{x['assist_symbols_ex']}_{x['assist_symbols_ac']}", stgs))
-        stgs["tradeSymbolList"] = list(map(lambda x: f"{x['trade_symbols']}:{x['trade_symbols_ex']}_{x['trade_symbols_ac']}", stgs))
         
+        sym_list=[]
+        stgs["tradeSymbolList"] =[]
+
+        for sym,ex,ac in zip(stgs["assist_symbols"],stgs["assist_symbols_ex"],stgs["assist_symbols_ac"]):
+            sym_list.append(f"{sym}:{ex}_{ac}")
+        for sym,ex,ac in zip(stgs["trade_symbols"],stgs["trade_symbols_ex"],stgs["trade_symbols_ac"]):
+            stgs["tradeSymbolList"].append(f"{sym}:{ex}_{ac}")
+
         for symbol in list(sym_list):
             if symbol in stgs["tradeSymbolList"]:
                 sym_list.remove(symbol)
@@ -110,6 +120,7 @@ class strategy(BaseHandler):
         stgs["git_path"] = self.get_argument('git_path', None)
         stgs["name"] = self.get_argument('name', None)
         stgs["strategy_class_name"] = self.get_argument('strategy_class_name', None)
+        stgs["alias"] = filter_name(stgs["name"])
 
         if self.get_argument("_id", None):
             flt={"_id":ObjectId(self.get_argument("_id"))}
@@ -121,7 +132,9 @@ class strategy(BaseHandler):
             stgs["createtime"] = datetime.now().strftime("%Y%m%d %H:%M")
             stgs["updatetime"] = stgs["createtime"]
             self.db_client.insert_one("strategy", stgs)
+            self.db_client.insert_one("pos",{"name":stgs["alias"],"long":0,"short":0})
         self.redirect("/dashboard")
+    
 
 class task_sheet(BaseHandler):
     @tornado.web.authenticated
@@ -206,8 +219,11 @@ class assignment(BaseHandler):
         servers = self.db_client.query("server",{"server_name":{"$in":server_names}})
         
         key_chain = {}
+        keys=[]
         key_list = list(map(lambda x: x['trade_symbols_ac']+x['assist_symbols_ac'], json_obj))
-        keys = self.db_client.query("account",{"name":{"$in":list(set(key_list))}})
+        for key in key_list:
+            keys+=key
+        keys = self.db_client.query("account",{"name":{"$in":list(set(keys))}})
 
         for key in keys:
             key_chain.update({key["name"]:[key["apikey"],key["secretkey"],key["passphrase"]]})
@@ -284,8 +300,8 @@ class MainHandler(BaseHandler):
     def get(self,*args,**kwargs):
         print("conn get\n",args, self.request.__dict__)
         if self.get_argument("checkName", None):
-            qry = self.get_argument("checkName")
-            r = self.db_client.query_one("strategy",{"name":qry})
+            qry = filter_name(self.get_argument("checkName"))
+            r = self.db_client.query_one("strategy",{"alias":qry})
         elif self.get_argument("checkUser", None):
             qry = self.get_argument("checkUser")
             r = self.db_client.query_one("user",{"name":qry})
@@ -302,6 +318,10 @@ class MainHandler(BaseHandler):
         elif self.get_argument("getAccount", None):
             self.finish(self.ac_dict)
             return
+        elif self.get_argument("orders", None):
+            r=json.loads(self.get_argument("orders"))
+            print(r)
+            return
         if r:
             msg = True
         else:
@@ -312,7 +332,7 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
     users = set()  # 用来存放在线用户的容器
     def open(self):
         self.users.add(self)  # 建立连接后添加用户到容器中
-        for strategy,pos in self.pos_dict:
+        for strategy,pos in self.pos_dict.items():
             self.on_message(json.dumps({"_name":f"long-{strategy}","_val":pos[0]}))
             self.on_message(json.dumps({"_name":f"short-{strategy}","_val":pos[1]}))
 
@@ -326,11 +346,11 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
     def post(self,*args,**kwargs):
         print("conn post\n",args, self.request.__dict__)
         if self.get_argument("orders", None):
-            orders = self.get_argument("orders")
+            orders = json.loads(self.get_argument("orders"))
             self.db_client.insert_many("orders",orders)
             for order in orders:
-                strategy,direction,vol = order["strategy"],order["type"],order["size"]
-                pos_long,pos_short = self.pos_dict[strategy]
+                strategy,direction,vol = order["name"],order["type"],order["qty"]
+                pos_long,pos_short = self.pos_dict.get(strategy,[0,0])
 
                 if direction =="1":
                     pos_long += vol
@@ -344,6 +364,8 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
                 self.on_message(json.dumps({"_name":f"long-{strategy}","_val":pos_long}))
                 self.on_message(json.dumps({"_name":f"short-{strategy}","_val":pos_short}))
                 self.pos_dict[strategy] = [pos_long,pos_short]
+            for stg,pos in self.pos_dict.items():
+                self.db_client.update_one("pos",{"name":stg},{"name":stg,"long":pos[0],"short":pos[1]})
 
 #---------------------------------------------------------------------
 
