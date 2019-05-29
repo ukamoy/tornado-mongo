@@ -49,16 +49,36 @@
 
     <form  class="stdform stdform2" action="/query_order" method="post"  class="form-signin">
     <h2 class="form-signin-heading">Query Orders</h2>
-    account  : OKEX_<input type="text" class="form-control" name="ac_name"><br><br>
-    symbol   : <input type="text" class="form-control" name="symbol"><br><br>
-    status    : <select name="state" class="form-select-combine">
+    <p>
+        <label>account</label>
+        <span class="field">
+            OKEX_<input type="text" class="form-control" name="ac_name">
+        </span><!--field-->
+    </p>
+    <p>
+        <label>symbol</label>
+        <span class="field">
+            <input type="text" class="form-control" name="symbol">
+        </span><!--field-->
+    </p>
+    <p>
+        <label>status</label>
+        <span class="field">
+            <select name="state" class="form-control">
                 <option>(omit if query specific order)</option>
                 <option value="6">未完成单</option>
                 <option value="2">成交单</option>
                 <option value="-2">拒单</option>
                 <option value="-1">撤销单</option>
-                </select><br><br>
-    oid | id : <input type="text" class="form-control" name="oid" placeholder="(omit if query by order status)"><br><br>
+            </select>
+        </span><!--field-->
+    </p>
+    <p>
+        <label>oid | id</label>
+        <span class="field">
+                <input type="text" class="form-control" name="oid" placeholder="(omit if query by order status)">
+        </span><!--field-->
+    </p>
     <button type="submit" class="btn btn-sm btn-primary">Look Up</button>
     </form>
 
