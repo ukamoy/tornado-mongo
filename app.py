@@ -66,7 +66,7 @@ class orders(BaseHandler):
     def get(self):
         r=""
         if self.get_argument("name",None):
-            qry={"strategy":self.get_argument("name")}
+            qry={"name":self.get_argument("name")}
             r=self.db_client.query("orders",qry,[('_id', -1)])
         self.render("orders.html", title = "FIND ORDERS", data=r)
     
@@ -328,6 +328,9 @@ class MainHandler(BaseHandler):
         elif self.get_argument("getAccount", None):
             self.finish(self.ac_dict)
             return
+        elif self.get_argument("strategy", None):
+            r = self.db_client.query("strategy",{})
+            return r
         else:
             r=[]
         if r:
