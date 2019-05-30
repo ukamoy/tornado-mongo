@@ -171,7 +171,7 @@ class task_sheet(BaseHandler):
             }
         
         self.db_client.insert_one("tasks", args)
-        dingding("deploy",f"{current_user['name']} submitted a task \nid: {task_id}")
+        dingding("deploy",f"{current_user['name']} submitted a task \n\nid: {task_id}")
         self.redirect("/dashboard/task_sheet/all")
 
 class deploy(BaseHandler):
@@ -195,7 +195,7 @@ class deploy(BaseHandler):
         
         self.db_client.update_one("tasks",{"_id":ObjectId(_id)},{"status":method})
         task = self.db_client.query_one("tasks",{"_id":ObjectId(_id)})
-        dingding("deploy", f"{task['Author']}'s task: {task['task_id']}  {method}")
+        dingding("deploy", f"{task['Author']}'s task {method} \n\n id: {task['task_id']}  ")
 
 class assignment(BaseHandler):
     @tornado.web.authenticated
@@ -219,7 +219,8 @@ class assignment(BaseHandler):
 
         msg = self.assign_task(_ids, task_id)
         self.db_client.update_one("tasks",{"_id":ObjectId(task_id)},{"status":"assigned"})
-        dingding("deploy",f"task: {task_id} assigned \n {msg}")
+        json_obj = self.db_client.query_one("tasks",{"_id":ObjectId(task_id)})
+        dingding("deploy", f"{json_obj['Author']}'s task assigned \n\nid: {json_obj['task_id']} \n {msg}")
         self.redirect("/deploy/list/todo")
 
     def assign_task(self, _ids, task_id):
@@ -312,12 +313,16 @@ class MainHandler(BaseHandler):
         if self.get_argument("checkName", None):
             qry = filter_name(self.get_argument("checkName"))
             r = self.db_client.query_one("strategy",{"alias":qry})
+            msg = True if r else False
+            self.finish(json.dumps(msg))
         elif self.get_argument("checkUser", None):
             qry = self.get_argument("checkUser")
             r = self.db_client.query_one("user",{"name":qry})
         elif self.get_argument("checkDing", None):
             qry = self.get_argument("checkDing")
             r = self.db_client.query_one("ding",{"name":qry})
+            msg = True if r else False
+            self.finish(json.dumps(msg))
         elif self.get_argument("task_id", None):
             t = self.get_argument("task_id")
             n = self.get_argument("stg_name")
@@ -325,19 +330,15 @@ class MainHandler(BaseHandler):
             r = self.db_client.query_one("tasks",qry)
             running_stg = r["running"].append(n)
             self.db_client.update_one("tasks",qry,{"running":running_stg})
+            msg = True if r else False
+            self.finish(json.dumps(msg))
         elif self.get_argument("getAccount", None):
             self.finish(self.ac_dict)
             return
         elif self.get_argument("strategy", None):
             r = self.db_client.query("strategy",{})
-            return r
-        else:
-            r=[]
-        if r:
-            msg = True
-        else:
-            msg = False
-        self.finish(json.dumps(msg))
+            self.finish(str(r))
+        
 
 class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
     users = set()  # 用来存放在线用户的容器
@@ -354,6 +355,7 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
         for u in self.users:  # 向在线用户广播消息
             u.write_message(message)
 
+    @tornado.gen.coroutine
     def post(self,*args,**kwargs):
         print("pos post\n", args, self.request.__dict__["arguments"], "body:", self.request.__dict__["body_arguments"])
         if self.get_argument("orders", None):

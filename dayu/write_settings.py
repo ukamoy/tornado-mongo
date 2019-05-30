@@ -33,15 +33,15 @@ def cp_files(c, server_name, task_id):
 
     # clean_target_strategy
     target_folder = f"{USER_HOME}/Strategy"
-    c.run(f"rm -r {USER_HOME}/BACKUP")
-    c.run(f"mkdir {USER_HOME}/BACKUP")
+    # c.run(f"rm -r {USER_HOME}/BACKUP")
+    c.run(f"mkdir {USER_HOME}/BACKUP/{task_id}")
     with c.cd(target_folder):
         # move existing stg to backup folder
         for stg in new_stg_list:
             if not stg:
                 continue
             try:
-                c.run(f"mv {stg} {USER_HOME}/BACKUP")
+                c.run(f"mv {stg} {USER_HOME}/BACKUP/{task_id}")
                 print("moved:",stg)
             except:
                 print("no exists: ",stg)
@@ -74,6 +74,8 @@ def prepare_stg_files(data,task_id,key_chain):
         with open(f"{working_folder}/CTA_setting.json","w") as f:
             # 直接覆盖，不读取
             setting = stg["strategy_setting"]
+            if isinstance(setting,list):
+                setting=setting[0]
             setting["name"] = stg["name"]
             setting["className"] = stg["strategy_class_name"]
             setting["symbolList"] = stg["symbolList"]
