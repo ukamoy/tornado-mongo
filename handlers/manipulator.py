@@ -6,7 +6,7 @@ import os,json,traceback,re
 class mainipulator(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
-        print("conn get\n",args, self.request.__dict__["arguments"], "body:", self.request.__dict__["body_arguments"])
+        print("conn get",args, self.request.__dict__["arguments"], "body:", self.request.__dict__["body_arguments"])
         if self.get_argument("checkName", None):
             qry = filter_name(self.get_argument("checkName"))
             r = self.db_client.query_one("strategy",{"alias":qry})

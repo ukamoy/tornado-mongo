@@ -139,7 +139,7 @@ def result_presentation(strategy_result):
 
 def run(json_obj):
     df = pd.DataFrame(json_obj)
-
+    result={}
     if df.size > 0:
         data = df[["datetime","account","strategy","instrument_id","filled_qty","price_avg","fee","type","contract_val","order_type"]]
         data = data.sort_values(by = "datetime", ascending = True)
@@ -149,8 +149,7 @@ def run(json_obj):
         price_dict = {}
         for instrument in currency_list:
             price_dict[instrument] = query_price(instrument)
-
-        strategy = DB_QUERY["strategy"]
+        strategy = list(set(data["strategy"].values))[0]
         result[strategy] ={}
         data["vtSymbol"] = data["instrument_id"]+":"+data["account"]
         instruments = list(set(data["vtSymbol"]))

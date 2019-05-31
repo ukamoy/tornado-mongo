@@ -1,5 +1,5 @@
 from handlers import BaseHandler
-from dayu.util.user import Member
+from dayu.user import Member
 
 class home(BaseHandler):
     def get(self):
