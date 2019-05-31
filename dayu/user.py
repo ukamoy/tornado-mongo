@@ -6,12 +6,12 @@ import datetime
 import smtplib
 import json
 from config import HOSTNAME
-from dayu.util.db_conn import db_client
+from dayu.db_conn import db_client
 
 # import Mail
-from dayu.util import regex
-from dayu.util import constant
-from dayu.util import exception 
+from dayu import regex
+from dayu import constant
+from dayu import exception 
 
 class Member:
     """A wrapper.

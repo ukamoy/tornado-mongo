@@ -11,6 +11,7 @@
                     <tr>
                         <th style="display:none"></th>
                         <th>Task ID</th>
+                        <th>Author</th>
                         <th>Status</th>
                         <th>Operation</th>
                         <th>Strategy List</th>
@@ -21,6 +22,7 @@
                     <tr class="odd gradeX">
                         <td style="display:none">{{d["_id"]}}</td>
                         <td><a href="/deploy/assignment/{{d['_id']}}">{{d["task_id"]}}</a></td>
+                        <td">{{d["Author"]}}</td>
                         <td id = "{{d['_id']}}">{{d["status"]}}</td>
                         <td id = "link{{d['_id']}}">
                             {%if d["status"] == 'submitted' %}

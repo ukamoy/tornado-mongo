@@ -1,6 +1,6 @@
 import tornado.web
-from dayu.util.db_conn import db_client
-from dayu.util.user import Member
+from dayu.db_conn import db_client
+from dayu.user import Member
 from datetime import datetime
 
 class BaseHandler(tornado.web.RequestHandler):

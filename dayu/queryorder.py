@@ -4,12 +4,6 @@ from datetime import datetime
 import hmac
 import base64
 
-import okex.account_api as account
-import okex.futures_api as future
-import okex.lever_api as lever
-import okex.spot_api as spot
-import okex.swap_api as swap
-
 def find_key(account_name):
     key_path = f"/home/dayu/Documents/APIKEY_READ_ONLY/OKEX_{account_name}_connect.json"
     with open(key_path) as f:

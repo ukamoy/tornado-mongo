@@ -1,13 +1,9 @@
-from pymongo import MongoClient
 import pandas as pd
 import os
-from datetime import datetime,timedelta
 import json
 import requests
 
 REST_HOST = "https://www.okex.com"
-MONGO_URI = "mongodb://dayu:Xinger520@localhost:27017/dayu-orders"
-DB_NAME = "dayu-orders"
 ATT_PATH = f"{os.getcwd()}/tmp"
 class position_span(object):
     def __init__(self, instrument):
@@ -141,11 +137,8 @@ def result_presentation(strategy_result):
 
     return result
 
-def run(DB_QUERY):
-    result = {}
-    db = MongoClient(MONGO_URI)[DB_NAME]
-    Cursor = db["future"].find(DB_QUERY)
-    df = pd.DataFrame(list(Cursor))
+def run(json_obj):
+    df = pd.DataFrame(json_obj)
 
     if df.size > 0:
         data = df[["datetime","account","strategy","instrument_id","filled_qty","price_avg","fee","type","contract_val","order_type"]]
@@ -173,16 +166,3 @@ def run(DB_QUERY):
 
     strategy_result = result_presentation(result)
     return strategy_result
-
-def get_stg_list(DB_QUERY):
-    db = MongoClient(MONGO_URI)[DB_NAME]
-    Cursor = db["future"].find(DB_QUERY)
-    df = pd.DataFrame(list(Cursor))
-    stg_list = []
-    if df.size > 0:
-        data = df[["datetime","account","strategy","instrument_id","filled_qty","price_avg","fee","type","contract_val","order_type"]]
-        data = data.sort_values(by = "datetime", ascending = True)
-        
-        stg_list = list(set(data["strategy"]))
-        stg_list.sort()
-    return stg_list
