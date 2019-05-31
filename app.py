@@ -4,7 +4,7 @@ import tornado.websocket
 # from tornado.options import define,options,parse_command_line
 from fabric import Connection
 import os,json,traceback,re
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from dayu.performance import run
 from dayu.queryorder import query
 from handlers import BaseHandler
@@ -24,6 +24,11 @@ def filter_name(name):
         filter_text = "0123456789" + alpha + alpha.upper()
         new_name = filter(lambda ch: ch in filter_text, name)
         return ''.join(list(new_name))[:13]
+def convertDatetime(timestring):
+    dt = datetime.strptime(timestring, '%Y-%m-%dT%H:%M:%S.%fZ')
+    dt = dt.replace(tzinfo=timezone(timedelta()))
+    local_dt = datetime.fromtimestamp(dt.timestamp())
+    return local_dt
 
 class home(BaseHandler):
     def get(self):
@@ -64,11 +69,13 @@ class strategy_performance(BaseHandler):
 class orders(BaseHandler):
     @tornado.web.authenticated
     def get(self):
-        r=""
         if self.get_argument("name",None):
-            qry={"name":self.get_argument("name")}
+            name = self.get_argument("name")
+            qry={"strategy":name}
             r=self.db_client.query("orders",qry,[('_id', -1)])
-        self.render("orders.html", title = "FIND ORDERS", data=r)
+            self.render("orders.html", title = f"{name} ORDERS", data=r,enquiry=False)
+        else:
+            self.render("orders.html", title = "FIND ORDERS", data="",enquiry=True)
     
     def post(self):
         ac=self.get_argument("ac_name")
@@ -81,11 +88,13 @@ class orders(BaseHandler):
             if r:
                 if r.get("result", None):
                     result=r["order_info"]
+                    result=list(map(lambda x:dict(x, **{"datetime":convertDatetime(x["timestamp"])}),result))
                 else:
+                    r["datetime"]=convertDatetime(r["timestamp"])
                     result=[r]
         except:
             pass
-        self.render("orders.html", title = "FIND ORDERS", data = result)
+        self.render("orders.html", title = "Orders Result", data = result, enquiry=False)
 
 class dashboard(BaseHandler):
     @tornado.web.authenticated
@@ -336,9 +345,8 @@ class MainHandler(BaseHandler):
             self.finish(self.ac_dict)
             return
         elif self.get_argument("strategy", None):
-            r = self.db_client.query("strategy",{})
-            self.finish(str(r))
-        
+            r = self.db_client.query("strategy",{}, projection={"_id":0})
+            self.finish(json.dumps(r))
 
 class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
     users = set()  # 用来存放在线用户的容器

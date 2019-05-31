@@ -30,7 +30,7 @@
             <tbody>
                 {% for d in data %}
                 <tr class="odd gradeX">
-                    <td>{{d["timestamp"]}}</td>
+                    <td>{{d["datetime"]}}</td>
                     <td>{{d["instrument_id"]}}</td>
                     <td>{{d["type"]}}</td>
                     <td>{{d["price_avg"]}}</td>
@@ -46,6 +46,7 @@
         </table>
     </div>
     {%else%}
+    {%if enquiry%}
 
     <form  class="stdform stdform2" action="/orders" method="post"  class="form-signin">
     <h2 class="form-signin-heading">Query Orders</h2>
@@ -81,8 +82,13 @@
     </p>
     <button type="submit" class="btn btn-sm btn-primary">Look Up</button>
     </form>
-
+    {%else%}
+    no data
+    {%end%}
     {% end %}
+    <br>
+    <button type="button" class="btn btn-md btn-info" onclick="GoBackward()">Go Back</button>
+
     </div></div>
 </div>
 {% end %}

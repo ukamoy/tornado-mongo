@@ -6,8 +6,8 @@ class db_client(object):
     def __init__(self):
         self.db = db=pymongo.MongoClient(dbURI)[dbname]
 
-    def query(self, collection, qry, sort = None):
-        cur = self.db[collection].find(qry, sort=sort)
+    def query(self, collection, qry, sort = None, projection=None):
+        cur = self.db[collection].find(qry, sort=sort, projection=projection)
         return list(cur)
 
     def query_one(self, collection, qry):
