@@ -344,9 +344,20 @@ class MainHandler(BaseHandler):
         elif self.get_argument("getAccount", None):
             self.finish(self.ac_dict)
             return
-        elif self.get_argument("strategy", None):
-            r = self.db_client.query("strategy",{}, projection={"_id":0})
-            self.finish(json.dumps(r))
+
+class public(BaseHandler):
+    def get(self):
+        member = self.db_client.query_one("user", {"auth": self.get_cookie('auth')})
+        if member:
+            if self.get_argument("strategy", None):
+                name = self.get_argument("strategy", None)
+                qry = {} if name =="all" else {"name":name} 
+                r = self.db_client.query("strategy",qry, projection={"_id":0})
+                self.finish(json.dumps(r))
+            else:
+                raise tornado.web.HTTPError(404)
+        else:
+            raise tornado.web.HTTPError(403)
 
 class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
     users = set()  # 用来存放在线用户的容器
@@ -407,7 +418,8 @@ application = tornado.web.Application([
     (r"/chart/([a-zA-Z0-9]+)", strategy_performance),
     (r"/dy", MainHandler), 
     (r"/ding", ding), 
-    (r"/pos", posHandler)
+    (r"/pos", posHandler),
+    (r"/q", posHandler)
 ],**settings)
 
 if __name__ == "__main__":
