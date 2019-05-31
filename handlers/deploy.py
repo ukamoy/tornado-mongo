@@ -4,6 +4,7 @@ from dayu.ding import dingding
 from dayu.util import mongo_obj
 import os,json,traceback,re
 from fabric import Connection
+from bson import ObjectId
 from dayu.write_settings import update_repo, prepare_stg_files, cp_files
 
 class deploy(BaseHandler):

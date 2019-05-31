@@ -1,23 +1,23 @@
-import tornado.web
+import tornado
 from dayu.db_conn import db_client
 from dayu.user import Member
 from datetime import datetime
 
 class BaseHandler(tornado.web.RequestHandler):
+    @tornado.gen.coroutine
     def initialize(self):
         self.db_client = db_client()
         
-        json_obj = self.db_client.query("exchange",{})
-        json_obj2 = self.db_client.query("pos",{})
-
-        self.ac_dict = {}
-        for ex in json_obj:
-            self.ac_dict.update({ex["name"]:[ex["keys"],ex["symbols"]]})
-        
         self.pos_dict={}
-        for pos in json_obj2:
+        json_obj = self.db_client.query("pos",{})
+        for pos in json_obj:
             self.pos_dict.update({pos["name"]:[pos["long"],pos["short"]]})
-        
+
+        json_obj2 = self.db_client.query("exchange",{})
+        self.ac_dict = {}
+        for ex in json_obj2:
+            self.ac_dict.update({ex["name"]:[ex["keys"],ex["symbols"]]})
+            
     def get_current_user(self):
         # For read only
         member = self.db_client.query_one("user", {"auth": self.get_cookie('auth')})

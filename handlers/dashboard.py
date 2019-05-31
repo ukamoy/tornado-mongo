@@ -5,7 +5,7 @@ from dayu.ding import dingding
 from dayu.util import filter_name, convertDatetime
 import os,json,traceback,re
 from bson import ObjectId
-
+from datetime import datetime
 from dayu.performance import run
 from dayu.queryorder import query
 
@@ -98,6 +98,7 @@ class task_sheet(BaseHandler):
 
 class chart(BaseHandler):
     @tornado.web.authenticated
+    @tornado.gen.coroutine
     def get(self,*args,**kwargs):
         strategy = args[0]
         qry = {"strategy":strategy,"state":{"$in":["-1","2"]}}
@@ -107,11 +108,12 @@ class chart(BaseHandler):
 
 class orders(BaseHandler):
     @tornado.web.authenticated
+    @tornado.gen.coroutine
     def get(self):
         if self.get_argument("name",None):
             name = self.get_argument("name")
             qry={"strategy":name}
-            r=self.db_client.query("orders",qry,[('_id', -1)])
+            r=self.db_client.query("orders",qry,[('datetime', -1)])
             self.render("orders.html", title = f"{name} ORDERS", data=r,enquiry=False)
         else:
             self.render("orders.html", title = "FIND ORDERS", data="",enquiry=True)
@@ -152,28 +154,11 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
 
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):
-        print("pos post\n", args, self.request.__dict__["arguments"], "body:", self.request.__dict__["body_arguments"])
-        if self.get_argument("orders", None):
-            orders = json.loads(self.get_argument("orders"))
-            self.db_client.insert_many("orders",orders)
-            for order in orders:
-                strategy,direction,vol = order["name"],order["type"],order["qty"]
-                pos_long,pos_short = self.pos_dict.get(strategy,[0,0])
-
-                if direction =="1":
-                    pos_long += vol
-                elif direction =="2":
-                    pos_short += vol
-                elif direction =="3":
-                    pos_long -= vol
-                elif direction =="4":
-                    pos_short -= vol
-
-                self.on_message(json.dumps({"_name":f"long-{strategy}","_val":pos_long}))
-                self.on_message(json.dumps({"_name":f"short-{strategy}","_val":pos_short}))
-                self.pos_dict[strategy] = [pos_long,pos_short]
-                self.db_client.update_one("pos",{"name":strategy},{"name":strategy,"long":pos_long,"short":pos_short})
-
+        print("pos post", args, self.request.__dict__["arguments"], "body:", self.request.__dict__["body_arguments"])
+        if self.get_argument("pos", None):
+            pos = json.loads(self.get_argument("pos"))
+            for name,val in pos.items():
+                self.on_message(json.dumps({"_name":name,"_val":val}))
 
 handlers = [
     (r"/dashboard", dashboard), 
