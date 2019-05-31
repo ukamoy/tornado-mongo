@@ -144,6 +144,8 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
         for strategy,pos in self.pos_dict.items():
             self.on_message(json.dumps({"_name":f"long-{strategy}","_val":pos[0]}))
             self.on_message(json.dumps({"_name":f"short-{strategy}","_val":pos[1]}))
+        dt=datetime.now().strftime("%H:%M:%S")
+        self.on_message(json.dumps({"_name":"time","_val":dt}))
 
     def on_close(self):
         self.users.remove(self) # 用户关闭连接后从容器中移除用户
@@ -159,6 +161,8 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
             pos = json.loads(self.get_argument("pos"))
             for name,val in pos.items():
                 self.on_message(json.dumps({"_name":name,"_val":val}))
+            dt=datetime.now().strftime("%H:%M:%S")
+            self.on_message(json.dumps({"_name":"time","_val":dt}))
 
 handlers = [
     (r"/dashboard", dashboard), 
