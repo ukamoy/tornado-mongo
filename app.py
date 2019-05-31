@@ -354,8 +354,11 @@ class public(BaseHandler):
                 qry = {} if name =="all" else {"name":name} 
                 r = self.db_client.query("strategy",qry, projection={"_id":0})
                 self.finish(json.dumps(r))
-            else:
-                raise tornado.web.HTTPError(404)
+            if self.get_argument("ding", None):
+                name = self.get_argument("ding", None)
+                qry = {} if name =="all" else {"name":name} 
+                r = self.db_client.query("ding",qry, projection={"_id":0})
+                self.finish(json.dumps(r))
         else:
             raise tornado.web.HTTPError(403)
 
@@ -419,7 +422,7 @@ application = tornado.web.Application([
     (r"/dy", MainHandler), 
     (r"/ding", ding), 
     (r"/pos", posHandler),
-    (r"/q", posHandler)
+    (r"/q", public)
 ],**settings)
 
 if __name__ == "__main__":
