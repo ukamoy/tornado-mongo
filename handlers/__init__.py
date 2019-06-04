@@ -54,7 +54,7 @@ class BaseHandler(tornado.web.RequestHandler):
     def _member_db_map(self, db):
         # The returned dict object supply a uniform database access interface 
         try:
-            print(f"{datetime.now().strftime('%y%m%d %H:%M:%S')}: {db['name']}")
+            print(f"{datetime.now().strftime('%y%m%d %H:%M:%S')}: {db['name']},{self.request.uri}")
             return dict(
                 uid = db['uid'],
                 name = db['name'],

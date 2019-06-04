@@ -19,6 +19,7 @@ class position_span(object):
         self.instrument = instrument
         self.contract_value = 0
         self.missing_open = ""
+        self.account=""
         self.pnl_dict = {}
 
     def add_up_buy_orders(self, price, qty):
@@ -100,7 +101,6 @@ def result_presentation(strategy_result):
     from pandas.plotting import register_matplotlib_converters
     register_matplotlib_converters()
     result = {}
-    
     for strategy, performance in strategy_result.items():
         for instrument, position in performance.items():
             net_profit = position.profit_loss + position.fee + position.position_profit
@@ -140,6 +140,7 @@ def result_presentation(strategy_result):
 def run(json_obj):
     df = pd.DataFrame(json_obj)
     result={}
+    pos_dict={}
     if df.size > 0:
         data = df[["datetime","account","strategy","instrument_id","filled_qty","price_avg","fee","type","contract_val","order_type"]]
         data = data.sort_values(by = "datetime", ascending = True)
@@ -154,10 +155,11 @@ def run(json_obj):
         data["vtSymbol"] = data["instrument_id"]+":"+data["account"]
         instruments = list(set(data["vtSymbol"]))
         for instrument in instruments:
-            sym = instrument.split(":")[0]
-            per_coin_data = data[data["instrument_id"] == sym]
+            per_coin_data = data[data["vtSymbol"] == instrument]
             pos_dict = position_span(instrument)
             process_orders(per_coin_data, pos_dict)
+            
+            sym = instrument.split(":")[0]
             pos_dict.calculate_position_profit(price_dict[sym])
 
             # 缓存策略统计
