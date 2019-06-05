@@ -1,9 +1,7 @@
 import tornado.web
 from handlers import BaseHandler
-from dayu.ding import dingding
-from dayu.util import mongo_obj
+from dayu.util import mongo_obj,server_conn, dingding
 import os,json,traceback,re
-from fabric import Connection
 from bson import ObjectId
 from dayu.write_settings import update_repo, prepare_stg_files, cp_files
 
@@ -76,7 +74,7 @@ class assignment(BaseHandler):
         prepare_stg_files(json_obj, task_id, key_chain)
 
         for server in servers:
-            c = Connection(f"dayu@{server['server_ip']}", connect_kwargs = {"password":"Xinger520"})
+            c = server_conn(server['server_ip'])
             msg += cp_files(c, server['server_name'], task_id)
 
         return msg
@@ -97,7 +95,7 @@ class server(BaseHandler):
         server_history = {}
         msg = f"update vnpy to {branch}\n"
         for server in server_ips:
-            c = Connection(f"dayu@{server['id']}", connect_kwargs = {"password":"Xinger520"})
+            c = server_conn(server['id'])
             USER_HOME = "/home/dayu"
             with c.cd(f"{USER_HOME}/Documents/vnpy_fxdayu"):
                 c.run(f"yes | {USER_HOME}/anaconda3/bin/pip uninstall vnpy_fxdayu")

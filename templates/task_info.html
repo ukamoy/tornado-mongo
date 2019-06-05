@@ -12,6 +12,7 @@
                 <thead>
                     <tr>
                         <th>Name</th>
+                        <th>Operator</th>
                         <th>Symbols</th>
                         <th>Server</th>
                         <th>Update Time</th>
@@ -21,6 +22,8 @@
                     {% for d in data %}
                     <tr class="odd gradeX">
                         <td><a href = "/dashboard/strategy/{{d['_id']}}">{{d["name"]}}</a></td>
+                        <td><a class="btn btn-sm btn-danger" href="javascript:;" onclick="operator(this)" name="halt-{{d['name']}}" >Halt</a>
+                        </td>
                         <td>{{d["symbolList"]}}</td>
                         <td class="center">
                             <input type="hidden" value="{{d['_id']}}" name = "_id">

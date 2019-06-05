@@ -1,23 +1,24 @@
 import tornado.websocket
 import tornado.web
 from handlers import BaseHandler
-from dayu.ding import dingding
-from dayu.util import filter_name, convertDatetime
+from handlers.query import rotate_query
+from dayu.util import filter_name, convertDatetime, dingding
 import os,json,traceback,re
 from bson import ObjectId
 from datetime import datetime
 from dayu.performance import run
-from dayu.queryorder import query
 
 class dashboard(BaseHandler):
     @tornado.web.authenticated
     def get(self):
         current_user = self.get_current_user()
         qry = {}
+        operation=True
         if not current_user["group"] == "zeus":
             qry = {"Author":current_user["name"]}
+            operation=False
         json_obj = self.db_client.query("strategy",qry,[('_id', -1)])
-        self.render("dashboard.html", title = "DASHBOARD", data = json_obj)
+        self.render("dashboard.html", title = "DASHBOARD", data = json_obj,operation = operation)
 
 class strategy(BaseHandler):
     @tornado.web.authenticated
@@ -125,7 +126,8 @@ class orders(BaseHandler):
         oid=self.get_argument("oid")
         result=[]
         try:
-            r = query(ac, symbol, state, oid)
+            t= rotate_query()
+            r = t.query(f"OKEX_{ac}", symbol, state, oid)
             if r:
                 if r.get("result", None):
                     result=r["order_info"]
@@ -156,7 +158,7 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
 
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):
-        print("pos post", args, self.request.__dict__["arguments"], "body:", self.request.__dict__["body_arguments"])
+        print(datetime.now().strftime("%y%m%d %H:%M:%S"),"pos.post", args, self.request.arguments, "body:", self.request.body_arguments)
         if self.get_argument("pos", None):
             pos = json.loads(self.get_argument("pos"))
             for name,val in pos.items():

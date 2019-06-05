@@ -1,7 +1,7 @@
-from handlers import dashboard, users, deploy,manipulator
+from handlers import dashboard, users, deploy,operator
 
 handlers=[]
 handlers.extend(dashboard.handlers)
 handlers.extend(users.handlers)
 handlers.extend(deploy.handlers)
-handlers.extend(manipulator.handlers)
+handlers.extend(operator.handlers)

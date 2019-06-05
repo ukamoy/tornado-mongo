@@ -305,3 +305,26 @@ function deploy_progress(){
         }
     }
 }
+
+function operator(obj) {
+    var s = obj.name.split("-");
+    var name = s[1];
+    var method = s[0];
+    var tr = obj.parentNode.parentNode;
+	var tds = $(tr).find("td");
+
+    $.ajax({
+        url:"/operator",
+        type: "POST",
+        dataType:"json",
+        data: {"name":name,"method":method},
+        success:function(response){
+            if(response){
+                obj.attr({"disabled":"disabled"});
+                $(tds[2]).html("idle");
+            }else{
+                alert("failed");
+            }
+        },
+    });
+}

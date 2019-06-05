@@ -3,7 +3,9 @@ import tornado.web
 # from tornado.options import define,options,parse_command_line
 import os
 import urls
+
 from handlers.query import rotate_query
+
 
 settings = {
     "static_path": os.path.join(os.path.dirname(__file__), "static"),
