@@ -6,45 +6,41 @@ $(document).ready(
    function(){
    var s = String("{{title}}");
    $.ajax({
-        url:"/chart/"+s.split(" ")[0],
-        type: "POST",
-        dataType:"json",
-        data: null,
-        beforeSend:null,
-        error:null,
-        success:function(response){
-            if(response){
-                for(var ins in response){
-                  render(ins,response[ins]["pnl"]);
-                };
-            }else{
-                document.getElementById('stat').innerText = "no data";
+      url:"/chart/"+s.split(" ")[0],
+      type: "POST",
+      dataType:"json",
+      data: null,
+      beforeSend:beforeSend,
+      complete:complete,
+      error:error,
+      success:function(response){
+         if(response){
+            var ss = "";
+            for(var ins in response){
+               var item = response[ins];
+               ss+="<ul>"+ins+"<li>trade_count: "+item["trade_count"]+"</li>"+"<li>profit_loss: "+item["profit_loss"]+"</li>"+"<li>fee: "+item["fee"]+"</li>"+"<li>position_profit: "+item["position_profit"]+"</li>"+"<li>net_profit: "+item["net_profit"]+"</li>"+"<li>holding: long: "+item["holding_long"]+"  short: "+item["holding_short"]+"</li>";
+               if(item["missing_open"]!=""){
+                  ss+="<li>missing_open:</li>";
+                  for(var mo in item["missing_open"]){
+                     ss+="<li>"+item["missing_open"][mo]+"</li>";
+                  }
+               }
+               ss+="</ul><div id="+ins+" style='min-width: 310px; height: 400px; margin: 0 auto'></div>";
+            };
+            document.getElementById('stat').innerHTML = ss;
+            for(var ins in response){
+               render(ins,response[ins]["pnl"]);
             }
-        },
+         }else{
+               document.getElementById('stat').innerHTML = "no data";
+         }
+      },
     });
 
 });
 </script>
 {% end %}
 {% block body %}
-<div id=stat></div>
-   {%if data%}
-      <ul>
-      {% for instrument, item in data.items() %}
-         {{instrument}}
-         <li>trade_count: {{item["trade_count"] }}</li>
-         <li>profit_loss: {{item["profit_loss"] }}</li>
-         <li>fee: {{item["fee"] }}</li>
-         <li>position_profit: {{item["position_profit"] }}</li>
-         <li>net_profit: {{item["net_profit"] }}</li>
-         <li>holding: long: {{item["holding_long"] }} short: {{item["holding_short"] }}</li>
-         {%if item["missing_open"]%}
-            <li>missing_open:{{item["missing_open"]}}</li>
-         {%end%}
-      </ul>
-      <div id="{{instrument}}" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
-      {% end %}
-   {% else %}
-      no data <br>
-   {% end %}
+<div id="showResult"></div>
+<span id=stat></span>
 {%end%}
