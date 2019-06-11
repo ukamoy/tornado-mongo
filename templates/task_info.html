@@ -2,56 +2,51 @@
 {% block head %}
 {% end %}
 {% block body %}
-<div class="pageContainer">
-    <div class="main">
-        <h2 class="sub-header">Process Task</h2>
-        <form action="/deploy/assignment/deploy" method="post" id="form">
-        {%if data%}
-        <div class="table-responsive" style="margin-top: 10px">
-            <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="strategy_list">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Operator</th>
-                        <th>Symbols</th>
-                        <th>Server</th>
-                        <th>Update Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for d in data %}
-                    <tr class="odd gradeX">
-                        <td><a href = "/dashboard/strategy/{{d['_id']}}">{{d["name"]}}</a></td>
-                        <td><a class="btn btn-sm btn-danger" href="javascript:;" onclick="operator(this)" name="halt-{{d['name']}}" >Halt</a>
-                        </td>
-                        <td>{{d["symbolList"]}}</td>
-                        <td class="center">
-                            <input type="hidden" value="{{d['_id']}}" name = "_id">
-                            <select name="server_name" class="form-control" required>
-                                <option value = "idle" selected="selected">idle</option>
-                                {% for item in serv%}
-                                    {% if d["server"] == item %}
-                                        <option value = "{{item}}" selected="selected">{{item}}</option>
-                                    {%else%}
-                                        <option value = "{{item}}">{{item}}</option>
-                                    {%end%}
+<form action="/deploy/assignment/deploy" method="post" id="form">
+    {%if data%}
+    <div class="table-responsive" style="margin-top: 10px">
+        <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="strategy_list">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Operator</th>
+                    <th>Symbols</th>
+                    <th>Server</th>
+                    <th>Update Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in data %}
+                <tr class="odd gradeX">
+                    <td><a href = "/dashboard/strategy/{{d['_id']}}">{{d["name"]}}</a></td>
+                    <td><a class="btn btn-sm btn-danger" href="javascript:;" onclick="operator(this)" name="halt-{{d['name']}}" >Halt</a>
+                    </td>
+                    <td>{{d["symbolList"]}}</td>
+                    <td class="center">
+                        <input type="hidden" value="{{d['_id']}}" name = "_id">
+                        <select name="server_name" class="form-control" required>
+                            <option value = "idle" selected="selected">idle</option>
+                            {% for item in serv%}
+                                {% if d["server"] == item %}
+                                    <option value = "{{item}}" selected="selected">{{item}}</option>
+                                {%else%}
+                                    <option value = "{{item}}">{{item}}</option>
                                 {%end%}
-                            </select></td>
-                        <td class="center">{{d["updatetime"]}}</td>
-                    </tr>
-                    {% end %}
-                </tbody>
-            </table>
-        </div>
-        <div class = "row">
-            <input type="hidden" value="{{task_id}}" name = "task_id">
-            <button type="submit" class="btn btn-sm btn-primary" onclick="">Deploy</button>
-        </div>
-    {% else %}
-    no data
-    {% end %}
-    </form>
+                            {%end%}
+                        </select></td>
+                    <td class="center">{{d["updatetime"]}}</td>
+                </tr>
+                {% end %}
+            </tbody>
+        </table>
     </div>
-</div>
+    <div class = "row">
+        <input type="hidden" value="{{task_id}}" name = "task_id">
+        <button type="submit" class="btn btn-sm btn-primary" onclick="">Deploy</button>
+    </div>
+{% else %}
+no data
+{% end %}
+</form>
 
 {% end %}

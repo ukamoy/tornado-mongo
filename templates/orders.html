@@ -2,14 +2,10 @@
 {% block head %}
 <title>{{ title }}</title>
 <link href="{{static_url('css/table.css')}}" rel="stylesheet">
-
 {% end %}
 {% block body %}
-<div class="container-fluid">
-    <div class="main">
-            <div style="margin-top: 10px">
+<div style="margin-top: 10px">
     {%if data%}
-    <h2 class="sub-header">{{ title }}</h2>
     instruction: <br>
     type {1:open long, 2:open short, 3:close long, 4:close short}<br>
 
@@ -49,7 +45,6 @@
     {%if enquiry%}
 
     <form  class="stdform stdform2" action="/orders" method="post"  class="form-signin">
-    <h2 class="form-signin-heading">Query Orders</h2>
     <p>
         <label>account</label>
         <span class="field">
@@ -89,6 +84,5 @@
     <br>
     <button type="button" class="btn btn-md btn-info" onclick="GoBackward()">Go Back</button>
 
-    </div></div>
 </div>
 {% end %}

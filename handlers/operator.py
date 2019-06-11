@@ -1,6 +1,6 @@
 import tornado.web
 from handlers import BaseHandler
-from dayu.util import server_conn, dingding
+from dayu.util import server_conn, filter_name, dingding
 
 import re
 import os
@@ -10,6 +10,7 @@ from datetime import datetime
 
 class operator(BaseHandler):
     @tornado.web.authenticated
+    @tornado.gen.coroutine
     def post(self,*args, **kwargs):
         current_user = self.get_current_user()
         if not current_user["group"] == "zeus":
@@ -32,7 +33,9 @@ class operator(BaseHandler):
             else:
                 raise tornado.web.HTTPError(403)
             self.finish(json.dumps(res))
+            
     def launch(self,c, run_stg):
+        sleep(5)
         #c.cd(f"/home/dayu/Documrnts/Strategy/{run_stg}")
         #c.run("nohup /home/dayu/anaconda3/bin/vnpy run terminal -m")
         return False
@@ -75,6 +78,7 @@ class operator(BaseHandler):
 
 class mainipulator(BaseHandler):
     @tornado.web.authenticated
+    @tornado.gen.coroutine
     def get(self,*args,**kwargs):
         print("conn get",args, self.request.arguments, "body:", self.request.body_arguments)
         if self.get_argument("checkName", None):
@@ -104,6 +108,7 @@ class mainipulator(BaseHandler):
             return
 
 class public(BaseHandler):
+    @tornado.gen.coroutine
     def get(self):
         member = self.db_client.query_one("user", {"auth": self.get_cookie('auth')})
         if member:

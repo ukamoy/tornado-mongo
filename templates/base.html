@@ -55,8 +55,15 @@
          </div>
        </nav>
 
-       <div class="container">
-       <div id="content">{% block body %}{% end %}</div>
+      <div class="container">
+        <div id="content">
+          <div class="pageContainer">
+              <div class="main">
+                  <h2 class="sub-header">{{ title }}</h2>
+                  {% block body %}{% end %}
+              </div>
+          </div>
+        </div>
       </div>
    </body>
  </html>

@@ -1,31 +1,38 @@
 import tornado.websocket
 import tornado.web
 from handlers import BaseHandler
-from handlers.query import rotate_query
+from handlers.query import rotate_query, get_chart
 from dayu.util import filter_name, convertDatetime, dingding
 import os,json,traceback,re
 from bson import ObjectId
 from datetime import datetime
-from dayu.performance import run
 
 class dashboard(BaseHandler):
     @tornado.web.authenticated
+    @tornado.gen.coroutine
     def get(self):
         current_user = self.get_current_user()
-        qry = {}
-        operation=True
+        qry = {"Author":current_user["name"]}
+        operator=True
+        show = ""
         if not current_user["group"] == "zeus":
-            qry = {"Author":current_user["name"]}
-            operation=False
+            operator=False
+        if current_user["group"] in ["xinge","zeus"]:
+            show="all"
+            if self.get_argument("display",None):
+                qry = {}
+                show="mine"
+
         json_obj = self.db_client.query("strategy",qry,[('_id', -1)])
-        self.render("dashboard.html", title = "DASHBOARD", data = json_obj,operation = operation)
+        self.render("dashboard.html", title = "DASHBOARD", data=json_obj,operator=operator,show=show)
 
 class strategy(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
         stgs = {} if args[0] =='new' else self.db_client.query_one("strategy",{"_id":ObjectId(args[0])}) 
         self.render("strategy.html", title = "New Strategy", data = stgs)
-    
+
+    @tornado.gen.coroutine
     def post(self,*args,**kwargs):
         current_user = self.get_current_user()
         post_values = ['trade_symbols','trade_symbols_ex','trade_symbols_ac',
@@ -99,44 +106,43 @@ class task_sheet(BaseHandler):
 
 class chart(BaseHandler):
     @tornado.web.authenticated
-    @tornado.gen.coroutine
     def get(self,*args,**kwargs):
         strategy = args[0]
-        qry = {"strategy":strategy,"state":{"$in":["-1","2"]}}
-        json_obj = self.db_client.query("orders",qry)
-        result = run(json_obj)
-        self.render("chart.html", title = strategy, data = result)
+        json_obj = self.db_client.query("orders",{"strategy":strategy})
+        result = get_chart(strategy, json_obj)
+        self.render("chart.html", title = f"{strategy} Chart",data=result)
+    def post(self,*args,**kwargs):
+        strategy = args[0]
+        json_obj = self.db_client.query("orders",{"strategy":strategy})
+        result = get_chart(strategy, json_obj)
+        self.finish(json.dumps(result))
 
 class orders(BaseHandler):
     @tornado.web.authenticated
     @tornado.gen.coroutine
     def get(self):
         if self.get_argument("name",None):
-            name = self.get_argument("name")
+            name=self.get_argument("name")
             qry={"strategy":name}
             r=self.db_client.query("orders",qry,[('datetime', -1)])
             self.render("orders.html", title = f"{name} ORDERS", data=r,enquiry=False)
         else:
             self.render("orders.html", title = "FIND ORDERS", data="",enquiry=True)
-    
+    @tornado.gen.coroutine
     def post(self):
-        ac=self.get_argument("ac_name")
-        symbol=self.get_argument("symbol")
-        state = self.get_argument("state")
-        oid=self.get_argument("oid")
-        result=[]
-        try:
-            t= rotate_query()
-            r = t.query(f"OKEX_{ac}", symbol, state, oid)
-            if r:
-                if r.get("result", None):
-                    result=r["order_info"]
-                    result=list(map(lambda x:dict(x, **{"datetime":convertDatetime(x["timestamp"])}),result))
-                else:
-                    r["datetime"]=convertDatetime(r["timestamp"])
-                    result=[r]
-        except:
-            pass
+        result = []
+        t = rotate_query()
+        r = t.query(
+            f"OKEX_{self.get_argument('ac_name')}", 
+            self.get_argument("symbol"), 
+            self.get_argument("state"), 
+            self.get_argument("oid"))
+        if r:
+            if r.get("result", None):
+                result=list(map(lambda x:dict(x, **{"datetime":convertDatetime(x["timestamp"])}),r["order_info"]))
+            else:
+                r["datetime"]=convertDatetime(r["timestamp"])
+                result=[r]
         self.render("orders.html", title = "Orders Result", data = result, enquiry=False)
 
 class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
@@ -146,8 +152,8 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
         for strategy,pos in self.pos_dict.items():
             self.on_message(json.dumps({"_name":f"long-{strategy}","_val":pos[0]}))
             self.on_message(json.dumps({"_name":f"short-{strategy}","_val":pos[1]}))
-        dt=datetime.now().strftime("%H:%M:%S")
-        self.on_message(json.dumps({"_name":"time","_val":dt}))
+
+        self.on_message(json.dumps({"_name":"time","_val":datetime.now().strftime("%H:%M:%S")}))
 
     def on_close(self):
         self.users.remove(self) # 用户关闭连接后从容器中移除用户
@@ -159,12 +165,12 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):
         print(datetime.now().strftime("%y%m%d %H:%M:%S"),"pos.post", args, self.request.arguments, "body:", self.request.body_arguments)
-        if self.get_argument("pos", None):
-            pos = json.loads(self.get_argument("pos"))
+        pos = self.request.arguments
+        if pos:
             for name,val in pos.items():
-                self.on_message(json.dumps({"_name":name,"_val":val}))
-            dt=datetime.now().strftime("%H:%M:%S")
-            self.on_message(json.dumps({"_name":"time","_val":dt}))
+                self.on_message(json.dumps({"_name":name,"_val":self.get_argument(name)}))
+
+        self.on_message(json.dumps({"_name":"time","_val":datetime.now().strftime("%H:%M:%S")}))
 
 handlers = [
     (r"/dashboard", dashboard), 
@@ -172,5 +178,5 @@ handlers = [
     (r"/dashboard/task_sheet/([a-zA-Z0-9]+)", task_sheet), 
     (r"/pos", posHandler),
     (r"/orders", orders),
-    (r"/chart/([a-zA-Z0-9]+)", chart)
+    (r"/chart/([a-zA-Z0-9]+)", chart),
 ]

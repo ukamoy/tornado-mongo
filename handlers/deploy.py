@@ -40,7 +40,7 @@ class assignment(BaseHandler):
         servers = self.db_client.query("server",{},[('_id', -1)])
         serv_name = list(map(lambda x: x["server_name"],servers))
         self.render("task_info.html", title = "ASSIGN SERVER", data = json_obj, serv = serv_name, task_id=args[0])
-    
+    @tornado.gen.coroutine
     def post(self,*args,**kwargs):
         server_name = self.get_arguments('server_name')
         _ids = self.get_arguments('_id')
@@ -88,7 +88,7 @@ class server(BaseHandler):
 
         json_obj = self.db_client.query("server",{},[('_id', -1)])
         self.render("server.html", title = "SERVER MGMT", data = json_obj)
-    
+    @tornado.gen.coroutine
     def post(self):
         branch = self.get_argument("branch")
         server_ips = json.loads(self.get_argument("server_ips"))

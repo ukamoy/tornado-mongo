@@ -1,10 +1,9 @@
 dbURI = "mongodb://localhost:27017"
 dbname = "dayu-deploy"
-
 HOSTNAME = "localhost"
 
+auth = ""
+server_credential = ""
 dingding_token = "" 
+
 USER_HOME = "/home/user"
-stg_folder = ""
-apikey_path = ""
-working_path =  ""

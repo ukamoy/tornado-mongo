@@ -5,12 +5,9 @@
 
 {% end %}
 {% block body %}
-<div class="pageContainer">
-    <div class="main">
-        <h2 class="sub-header">DingDing Info</h2>
-    {% if data %}
-    <a href="/ding?method=new" class="btn btn-sm btn-primary">New Ding Token</a>
-    <div class="table-responsive" style="margin-top: 10px">
+{% if data %}
+<a href="/ding?method=new" class="btn btn-sm btn-primary">New Ding Token</a>
+<div class="table-responsive" style="margin-top: 10px">
     <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="strategy_list">
         <thead>
             <tr>
@@ -29,35 +26,33 @@
             {% end %}
         </tbody>
     </table>
-    </div>
-
-    {%else%}
-    <div style="margin-top: 10px">
-        <form action="/ding?method=new" method="post"  class="form-signin">
-        <p>
-            {%if edit%}
-            <input type="hidden" name = "old_name" value="{{edit['name']}}">
-            <input type="hidden" name = "ding_name" value="{{edit['name']}}">
-            <label>name  : </label>{{edit['name']}}<br>
-            {%else%}
-            <label>name  : </label><input type="text" name="ding_name" onblur="check_ding()" size="80"><br>
-            <span id="nametip" class="prompt"></span><br>
-            {%end%}
-        </p>
-        <p>
-            {%if edit%}
-            <label>token  : </label><input type="text" name="ding_token" value="{{edit['token']}}" size="80"><br><br>
-            <button type="submit" class="btn btn-sm btn-primary" id ="submitbutton">save</button>
-        
-            {%else%}
-            <label>token  : </label><input type="text" name="ding_token" size="80"><br><br>
-            <button type="submit" class="btn btn-sm btn-primary" id ="submitbutton" disabled="disabled">save</button>
-        
-            {%end%}
-        </p>
-        </form>
-    </div>
-    {% end %}
-    </div>
 </div>
+
+{%else%}
+<div style="margin-top: 10px">
+    <form action="/ding?method=new" method="post"  class="form-signin">
+    <p>
+        {%if edit%}
+        <input type="hidden" name = "old_name" value="{{edit['name']}}">
+        <input type="hidden" name = "ding_name" value="{{edit['name']}}">
+        <label>name  : </label>{{edit['name']}}<br>
+        {%else%}
+        <label>name  : </label><input type="text" name="ding_name" onblur="check_ding()" size="80"><br>
+        <span id="nametip" class="prompt"></span><br>
+        {%end%}
+    </p>
+    <p>
+        {%if edit%}
+        <label>token  : </label><input type="text" name="ding_token" value="{{edit['token']}}" size="80"><br><br>
+        <button type="submit" class="btn btn-sm btn-primary" id ="submitbutton">save</button>
+    
+        {%else%}
+        <label>token  : </label><input type="text" name="ding_token" size="80"><br><br>
+        <button type="submit" class="btn btn-sm btn-primary" id ="submitbutton" disabled="disabled">save</button>
+    
+        {%end%}
+    </p>
+    </form>
+</div>
+{% end %}
 {% end %}

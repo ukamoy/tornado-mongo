@@ -19,37 +19,20 @@ $(function(){
 		var result = gether_checkbox();
 		$("#hidTD").val(JSON.stringify(result));
 		$("#form").submit();
-	});
-
+    });
+    
+    $(".navbar-nav").find("li").each(function () {
+        var a = $(this).find("a:first")[0];
+        if ($(a).attr("href") === location.pathname) {
+            $(this).addClass("active");
+        } else {
+            $(this).removeClass("active");
+        }
+    });
 })
 function GoBackward(){
     window.history.back();
     }
-// function update_waitlist(){
-	  // record all checkbox val
-		// var all = [];
-		// $("input:checkbox").each(function() {
-		// 		all.push($(this).attr("value"));
-		// });
-
-		// addup checked values
-// 		var che = [];
-// 		$("input[name='cc']:checked").each(function() {
-// 				che.push({"11":$(this).val()});
-// 		});
-// 		alert(che)
-// 		// post result
-// 		$.post("/dashboard/waitlist",{wailist:che});
-
-// 		//remove checked
-// 		$("input:checkbox").each(function() {
-// 			$(this).prop("checked", false);
-// 		});
-// 		alert("added to waitlist");
-//        var link=location.href.substring(location.href.indexOf("?")+1);
-//       var ding_name = link.split("=")[1];
-//        $.post("/ding?delete="+ding_name);
-// }
 
 function remove_row(obj){
 	var tr = obj.parentNode.parentNode;
@@ -112,19 +95,7 @@ function check_name(){
             type: "GET",
             dataType:"json",
             data: {"checkName":originName},
-            success:function(response){
-                if(response){
-                    $("input[name='name']").css({"color":'red'});
-                    document.getElementById("nametip").className ="prompt_alert";
-                    $("#nametip").html('该策略名已经被使用');
-                    $("#submitbutton").attr({"disabled":"disabled"});
-                }else{
-                    $("input[name='name']").css({"color":'green'});
-                    document.getElementById("nametip").className ="prompt";
-                    $("#nametip").html('该策略名可用');
-                    document.getElementById("submitbutton").disabled=false;
-                }
-            },
+            success:check_name_success
         });
     }
     else{
@@ -139,19 +110,7 @@ function check_ding(){
             type: "GET",
             dataType:"json",
             data: {"checkDing":originName},
-            success:function(response){
-                if(response){
-                    $("input[name='name']").css({"color":'red'});
-                    document.getElementById("nametip").className ="prompt_alert";
-                    $("#nametip").html('该名称不可用');
-                    $("#submitbutton").attr({"disabled":"disabled"});
-                }else{
-                    $("input[name='name']").css({"color":'green'});
-                    document.getElementById("nametip").className ="prompt";
-                    $("#nametip").html('该名称可用');
-                    document.getElementById("submitbutton").disabled=false;
-                }
-            },
+            success:check_name_success
         });
     }
     else{
@@ -167,21 +126,22 @@ function check_user(){
             type: "GET",
             dataType:"json",
             data: {"checkUser":originName},
-            success:function(response){
-                if(response){
-                    $("input[name='name']").css({"color":'red'});
-                    document.getElementById("nametip").className ="prompt_alert";
-                    $("#nametip").html('该用户名已经被使用');
-                }else{
-                    $("input[name='name']").css({"color":'green'});
-                    document.getElementById("nametip").className ="prompt";
-                    $("#nametip").html('该用户名可用');
-                }
-            },
+            success:check_name_success
         });
     }
     else{
         $("#nametip").html('');
+    }
+}
+function check_name_success(response){
+    if(response){
+        $("input[name='name']").css({"color":'red'});
+        document.getElementById("nametip").className ="prompt_alert";
+        $("#nametip").html('该用户名已经被使用');
+    }else{
+        $("input[name='name']").css({"color":'green'});
+        document.getElementById("nametip").className ="prompt";
+        $("#nametip").html('该用户名可用');
     }
 }
 function getAccount(_id) {
@@ -270,14 +230,7 @@ function removeSymbolRow(obj){
     nodeFather.removeChild(add_item); 
 }
 
-function checkform(){
-    if($("#nametip").html()=='该策略名已经被使用'){
-        alert('该策略名已经被使用');
-        return;
-    };
-}
-
-function deploy_progress(){
+function loading_response(){
     //获取浏览器页面可见高度和宽度
     var _PageHeight = document.documentElement.clientHeight,
         _PageWidth = document.documentElement.clientWidth;
@@ -318,13 +271,150 @@ function operator(obj) {
         type: "POST",
         dataType:"json",
         data: {"name":name,"method":method},
+        beforeSend:task_processing(obj),
+        error:restore_button(obj),
         success:function(response){
             if(response){
-                obj.attr({"disabled":"disabled"});
-                $(tds[2]).html("idle");
+                if (method=="halt"){$(tds[2]).html("idle");};
             }else{
-                alert("failed");
+                restore_button(obj);
+                alert(name+" "+method+" operation failed");
             }
         },
     });
 }
+function task_processing(obj){
+    $(obj).attr("disabled","disabled");
+    $(obj).css("pointer-events","none");
+}
+function restore_button(obj){
+    $(obj).attr("disabled",false);
+    $(obj).css("pointer-events","auto");
+}
+
+function render(instrument,pnl){
+    Highcharts.chart(instrument, {
+       chart: {
+             zoomType: 'x'
+       },
+       title: {
+             text: 'PnL Chart Over Time'
+       },
+       subtitle: {
+             text: document.ontouchstart === undefined ?
+                'Click and drag in the plot area to zoom in' : 'Pinch the chart to zoom in'
+       },
+       xAxis: {
+             type: 'datetime'
+       },
+       yAxis: {
+             title: {
+                text: 'PnL'
+             }
+       },
+       legend: {
+             enabled: false
+       },
+       plotOptions: {
+             area: {
+                fillColor: {
+                   linearGradient: {
+                         x1: 0,
+                         y1: 0,
+                         x2: 0,
+                         y2: 1
+                   },
+                   stops: [
+                         [0, Highcharts.getOptions().colors[0]],
+                         [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
+                   ]
+                },
+                marker: {
+                   radius: 2
+                },
+                lineWidth: 1,
+                states: {
+                   hover: {
+                         lineWidth: 1
+                   }
+                },
+                threshold: null
+             }
+       },
+ 
+       series: [{
+             type: 'line',
+             name: 'pnl',
+             data: pnl
+       }]
+    })
+ };
+ 
+//查找表格的<th>元素，让它们可单击
+function makeSortable(table) {
+    var headers=table.getElementsByTagName("th");
+    for(var i=0;i<headers.length;i++){
+        (function(n){
+            var flag=false;
+            headers[n].onclick=function(){
+                // sortrows(table,n);
+                var tbody=table.tBodies[0];//第一个<tbody>
+                var rows=tbody.getElementsByTagName("tr");//tbody中的所有行
+                rows=Array.prototype.slice.call(rows,0);//真实数组中的快照
+
+                //基于第n个<td>元素的值对行排序
+                rows.sort(function(row1,row2){
+                    var cell1=row1.getElementsByTagName("td")[n];//获得第n个单元格
+                    var cell2=row2.getElementsByTagName("td")[n];
+                    var val1=cell1.textContent||cell1.innerText;//获得文本内容
+                    var val2=cell2.textContent||cell2.innerText;
+
+                    if(val1<val2){
+                        return -1;
+                    }else if(val1>val2){
+                        return 1;
+                    }else{
+                        return 0;
+                    }
+                });
+                if(flag){
+                    rows.reverse();
+                }
+                //在tbody中按它们的顺序把行添加到最后
+                //这将自动把它们从当前位置移走，故没必要预先删除它们
+                //如果<tbody>还包含了除了<tr>的任何其他元素，这些节点将会悬浮到顶部位置
+                for(var i=0;i<rows.length;i++){
+                    tbody.appendChild(rows[i]);
+                }
+
+                flag=!flag;
+            }
+        }(i));
+    }
+}
+
+// function update_waitlist(){
+	  // record all checkbox val
+		// var all = [];
+		// $("input:checkbox").each(function() {
+		// 		all.push($(this).attr("value"));
+		// });
+
+		// addup checked values
+// 		var che = [];
+// 		$("input[name='cc']:checked").each(function() {
+// 				che.push({"11":$(this).val()});
+// 		});
+// 		alert(che)
+// 		// post result
+// 		$.post("/dashboard/waitlist",{wailist:che});
+
+// 		//remove checked
+// 		$("input:checkbox").each(function() {
+// 			$(this).prop("checked", false);
+// 		});
+// 		alert("added to waitlist");
+//        var link=location.href.substring(location.href.indexOf("?")+1);
+//       var ding_name = link.split("=")[1];
+//        $.post("/ding?delete="+ding_name);
+// }
