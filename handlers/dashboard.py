@@ -7,6 +7,24 @@ import os,json,traceback,re
 from bson import ObjectId
 from datetime import datetime
 
+class dashboard2(BaseHandler):
+    @tornado.web.authenticated
+    @tornado.gen.coroutine
+    def get(self):
+        current_user = self.get_current_user()
+        qry = {"Author":current_user["name"]}
+        operator=True
+        show = ""
+        if not current_user["group"] == "zeus":
+            operator=False
+        if current_user["group"] in ["xinge","zeus"]:
+            show="all"
+            if self.get_argument("display",None):
+                qry = {}
+                show="mine"
+
+        json_obj = self.db_client.query("strategy",qry,[('_id', -1)])
+        self.render("dashboard2.html", title = "DASHBOARD", data=json_obj,operator=operator,show=show)
 class dashboard(BaseHandler):
     @tornado.web.authenticated
     @tornado.gen.coroutine
@@ -90,7 +108,7 @@ class task_sheet(BaseHandler):
 
     def post(self, *args, **kwargs):
         current_user = self.get_current_user()
-        task_id = datetime.now().strftime("%Y%m%d%H%M%S")
+        task_id = datetime.now().strftime("%Y%m%d%H%M%S%f")[:-3]
         stgs = json.loads(self.get_argument('strategies'))
 
         args = {
@@ -101,7 +119,7 @@ class task_sheet(BaseHandler):
             }
         
         self.db_client.insert_one("tasks", args)
-        dingding("deploy",f"{current_user['name']} submitted a task \n\nid: {task_id}")
+        dingding("deploy",f"{args['Author']} submitted new task \n\nid: {args['task_id']}")
         self.redirect("/dashboard/task_sheet/all")
 
 class chart(BaseHandler):
@@ -174,6 +192,7 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
 
 handlers = [
     (r"/dashboard", dashboard), 
+    (r"/dashboard2", dashboard2), 
     (r"/dashboard/strategy/([a-zA-Z0-9]+)", strategy), 
     (r"/dashboard/task_sheet/([a-zA-Z0-9]+)", task_sheet), 
     (r"/pos", posHandler),

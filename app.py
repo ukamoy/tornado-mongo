@@ -19,4 +19,4 @@ if __name__ == "__main__":
     application.listen(9999)
     x=rotate_query()
     tornado.ioloop.PeriodicCallback(x.prepare,90000).start()
-    tornado.ioloop.IOLoop.instance().start()
+    tornado.ioloop.IOLoop.current().start()

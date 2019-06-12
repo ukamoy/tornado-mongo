@@ -1,12 +1,25 @@
 from datetime import datetime, timezone, timedelta
 from bson.objectid import ObjectId
 from fabric import Connection
-from config import server_credential, dingding_token
+from config import server_credential, dingding_token, docker_conf
 import json
 import requests
+from dayu.deployer import PortainerDeployer, ServerDeployer
 
 def server_conn(server_ip):
     return Connection(f"dayu@{server_ip}", connect_kwargs = {"password":server_credential})
+
+def get_server(server_name):
+    # 连接到portainer: {HOST}
+    deployer = PortainerDeployer(
+        docker_conf["host"], 
+        docker_conf["user"],
+        docker_conf["pwd"]
+    )
+
+    # 连接到{SERVER}
+    server = deployer.getServerByName(server_name)
+    return server
 
 def mongo_obj(id_list):
     ids = []

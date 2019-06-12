@@ -10,7 +10,7 @@ def update_repo():
     repo = git.cmd.Git(source_folder)
     repo.pull()
     a = repo.reflog()
-    return f" - 策略代码更新至版本号: {a.split(' ')[0]} \n"
+    return f" - 策略代码版本号: {a.split(' ')[0]} \n\n"
 
 def zip_folder(startdir, file_news):
     file_name_list = []
@@ -59,12 +59,12 @@ def cp_files(c, server_name, task_id):
     
     
 def prepare_stg_files(data,task_id,key_chain):
-    s = f"{working_path}/{task_id}"
-    if os.path.exists(s):
-        shutil.rmtree(s)
+    task_path = f"{working_path}/{task_id}"
+    if os.path.exists(task_path):
+        shutil.rmtree(task_path)
 
     for stg in data:
-        working_folder = f"{working_path}/{task_id}/{stg['server']}/{stg['name']}"
+        working_folder = f"{task_path}/{stg['name']}"
         # 复制工作目录
         shutil.copytree(f"{source_folder}/{stg['git_path']}",f"{working_folder}")
         # 复制运行脚本

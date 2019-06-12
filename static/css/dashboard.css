@@ -106,3 +106,34 @@ body {
     width: 20px;
     margin-left: 10px;
   }
+/* Border styles */
+.table-1 thead, .table-1 tr {
+  border-top-width: 1px;
+  border-top-style: solid;
+  border-top-color: rgb(114, 170, 235);
+  }
+
+.table-1 {
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: rgb(114, 170, 235);
+  width: 100%;
+  margin-bottom: 10px;
+  }
+  
+  /* Padding and font style */
+.table-1 td, .table-1 th {
+  padding: 5px 10px;
+  font-size: 12px;
+  font-family: Verdana;
+  color: rgb(0, 109, 187);
+  }
+  
+  /* Alternating background colors */
+.table-1 tr:nth-child(even) {
+  background: rgb(230, 244, 255)
+  }
+.table-1 tr:nth-child(odd) {
+  background: #FFF
+  }
+  

@@ -137,11 +137,13 @@ function check_name_success(response){
     if(response){
         $("input[name='name']").css({"color":'red'});
         document.getElementById("nametip").className ="prompt_alert";
-        $("#nametip").html('该用户名已经被使用');
+        $("#nametip").html('该名称已经被使用');
+        $("#submitbutton").attr({"disabled":"disabled"});
     }else{
         $("input[name='name']").css({"color":'green'});
         document.getElementById("nametip").className ="prompt";
-        $("#nametip").html('该用户名可用');
+        $("#nametip").html('该名称可用');
+        document.getElementById("submitbutton").disabled=false;
     }
 }
 function getAccount(_id) {
@@ -236,12 +238,13 @@ function error(XMLHttpRequest, textStatus, errorThrown){
     $("#showResult").append("<div>请求出错啦！</div>");
 }
 function beforeSend(XMLHttpRequest){
-    $("#showResult").append("<div><img src='../static/loading.gif' />Loading..<div>");
+    $("#showResult").append("<div><img src='../static/loading.gif' />Processing..<div>");
 }
 function complete(XMLHttpRequest, textStatus){
     $("#showResult").remove();
 }
-function operator(obj) {
+
+function old_operator(obj) {
     var s = obj.name.split("-");
     var name = s[1];
     var method = s[0];
@@ -249,7 +252,7 @@ function operator(obj) {
 	var tds = $(tr).find("td");
 
     $.ajax({
-        url:"/operator",
+        url:"/old_operator",
         type: "POST",
         dataType:"json",
         data: {"name":name,"method":method},
@@ -257,7 +260,9 @@ function operator(obj) {
         error:restore_button(obj),
         success:function(response){
             if(response){
-                if (method=="halt"){$(tds[2]).html("idle");};
+                if (method=="halt"){
+                    $(tds[2]).html("idle");
+                    alert(name+" halted");};
             }else{
                 restore_button(obj);
                 alert(name+" "+method+" operation failed");
@@ -265,6 +270,36 @@ function operator(obj) {
         },
     });
 }
+function operator(obj) {
+    var s = obj.name.split("-");
+    var method = s[0];
+    var name = s[1];
+    var task_id = s[2];
+    var tr = obj.parentNode.parentNode;
+	var tds = $(tr).find("td");
+
+    $.ajax({
+        url:"/operator",
+        type: "POST",
+        dataType:"json",
+        data: {"method":method, "name":name, "task_id":task_id},
+        beforeSend:task_processing(obj),
+        error:restore_button(obj),
+        success:function(response){
+            alert(response);
+            if(response){
+                if (method=="halt"){
+                    $(tds[2]).html("idle");
+                    alert(name+" halted");};
+                
+            }else{
+                restore_button(obj);
+                alert(name+" "+method+" operation failed");
+            }
+        },
+    });
+}
+
 function task_processing(obj){
     $(obj).attr("disabled","disabled");
     $(obj).css("pointer-events","none");

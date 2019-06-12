@@ -23,17 +23,19 @@ $(document).ready(
                   ss+="<li>missing_open:</li>";
                   for(var mo in item["missing_open"]){
                      ss+="<li>"+item["missing_open"][mo]+"</li>";
-                  }
-               }
+                  };
+               };
                ss+="</ul><div id="+ins+" style='min-width: 310px; height: 400px; margin: 0 auto'></div>";
             };
+            if(ss==""){ss="no trades"};
             document.getElementById('stat').innerHTML = ss;
+
             for(var ins in response){
                render(ins,response[ins]["pnl"]);
-            }
+            };
          }else{
-               document.getElementById('stat').innerHTML = "no data";
-         }
+               document.getElementById('stat').innerHTML = "no trades";
+         };
       },
     });
 
