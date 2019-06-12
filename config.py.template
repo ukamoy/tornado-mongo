@@ -7,3 +7,11 @@ server_credential = ""
 dingding_token = "" 
 
 USER_HOME = "/home/user"
+source_folder = f"{USER_HOME}/source_folder"
+working_path =  f"{USER_HOME}/working_path"
+
+docker_conf = {
+    "host":"",
+    "user":"",
+    "pwd":""
+}
