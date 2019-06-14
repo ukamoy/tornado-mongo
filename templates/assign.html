@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block head %}
+{% end %}
+{% block body %}
+
+<div class="zhezhao" id="zhezhao"></div> 
+<div class="msg" id="msg"><img src='/static/loading.gif' />Processing...</div>  
+<form action="/deploy/assignment/123" method="post" id="form">
+    {%if data%}
+    <div class="table-responsive" style="margin-top: 10px">
+        <table cellpadding="0" cellspacing="0" border="0" class="table-1" id="strategy_list">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Server</th>
+                    <th>Operator</th>
+                    <th>Symbols</th>
+                    <th>Update Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in data %}
+                <tr>
+                    <td><a href = "/dashboard/strategy/{{d['_id']}}">{{d["name"]}}</a></td>
+                    <td class="center">
+                            <input type="hidden" value="{{d['_id']}}" name = "_id">
+                            <select name="server_name" class="form-control" required>
+                                <option value = "idle" selected="selected">idle</option>
+                                {% for item in serv%}
+                                    {% if d["server"] == item %}
+                                        <option value = "{{item}}" selected="selected">{{item}}</option>
+                                    {%else%}
+                                        <option value = "{{item}}">{{item}}</option>
+                                    {%end%}
+                                {%end%}
+                            </select></td>
+                    <td>
+                        &nbsp;<a class="btn btn-xs btn-danger" href="javascript:;" onclick="old_operator(this)" name="halt-{{d['name']}}-{{task_id}}">Halt</a>
+                    </td>
+                    <td>{{d["symbolList"]}}</td>
+                    <td class="center">{{d["updatetime"]}}</td>
+                </tr>
+                {% end %}
+            </tbody>
+        </table>
+    </div>
+    <div class = "row">
+        <input type="hidden" value="{{Author}}" name = "Author">
+        <input type="hidden" value="{{task_id}}" name = "task_id">
+        <button type="submit" class="btn btn-sm btn-primary" onclick="">Deploy</button>
+    </div>
+{% else %}
+no data
+{% end %}
+</form>
+
+{% end %}

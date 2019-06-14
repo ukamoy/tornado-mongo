@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block head %}
+{% end %}
+{% block body %}
+<a href="/dashboard" class="btn btn-xs btn-primary">DASHBOARD</a>
+<div class="table-responsive" style="margin-top: 10px">
+    <table cellpadding="0" cellspacing="0" border="0" class="table-1" id="strategy_list">
+        <thead>
+            <tr>
+                <th>Task ID</th>
+                {%if Author%}
+                <th>Author</th>
+                {%end%}
+                <th>Status</th>
+                <th>Strategy List</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in data %}
+            <tr>
+                <td><a href="/dashboard/tasks/{{d['task_id']}}">{{d["task_id"]}}</a></td></td>
+                {%if Author%}
+                <th>{{d["Author"]}}</th>
+                {%end%}
+                <td>{{d["status"]}}</td>
+                <td>{{d["strategies"]}}</td>
+            </tr>
+            {% end %}
+        </tbody>
+    </table>
+</div>
+{% end %}

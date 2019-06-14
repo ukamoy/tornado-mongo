@@ -24,6 +24,7 @@ class rotate_query(object):
         self.db_client = db_client()
         self.active_ac = {}
         self.contract_map = {}
+        self.contract_reverse = {}
         self.pos_dict={}
         self.cookies={"auth":auth}
         self.new_pos_dict={}
@@ -35,28 +36,29 @@ class rotate_query(object):
         for r in res.json():
             vert=f"{r['underlying_index']}-{r['alias'].replace('_','-')}"
             self.contract_map[str.upper(vert)]=r["instrument_id"]
+            self.contract_reverse = {v:k for k,v in self.contract_map.items()}
 
         symbols=set()
         json_obj = self.db_client.query("strategy",{"server":{"$ne":"idle"}})
         for stg in json_obj:
             for sym in stg["symbolList"]:
                 symbols.add(sym)
+            self.pos_dict.update(stg["tradePos"])
         for sym in list(symbols):
             s,vt_ac = sym.split(":")
             ss = self.active_ac.get(vt_ac,set())
             ss.add(s)
             self.active_ac.update({vt_ac:ss})
 
-        json_obj = self.db_client.query("pos",{})
-        for pos in json_obj:
-            self.pos_dict.update({pos["name"]:[pos["long"],pos["short"]]})
+        #json_obj = self.db_client.query("pos",{})
+        #for pos in json_obj:
+        #    self.pos_dict.update({pos["name"]:[pos["long"],pos["short"]]})
 
         self.store()
 
     def store(self):
         json_obj =[]
         for vt_ac,symbols in self.active_ac.items():
-            ac = vt_ac.split("_")[1]
             for symbol in list(symbols):
                 for state in ["-1","2"]:
                     r = self.query(vt_ac, self.contract_map[symbol], state)
@@ -64,8 +66,8 @@ class rotate_query(object):
                         tmp=list(map(lambda x: dict(x,**{"account":vt_ac}),r["order_info"]))
                         result = list(map(lambda x: dict(x,**{"strategy":x["client_oid"].split("FUTU")[0]}),tmp))
                         json_obj += result
-
-        json_obj=list(map(lambda x:dict(x, **{"datetime":convertDatetime(x["timestamp"])}),json_obj))
+        if json_obj:
+            json_obj=list(map(lambda x:dict(x, **{"datetime":convertDatetime(x["timestamp"])}),json_obj))
         success=[]
         for order in json_obj:
             if str(order["filled_qty"]) == "0":
@@ -108,24 +110,29 @@ class rotate_query(object):
             dingding("DASHBOARD",ding)
 
     def update_pos(self, order):
-        strategy,direction,vol = order["strategy"],order["type"],float(order["filled_qty"])
-        pos_long,pos_short = self.pos_dict.get(strategy,[0,0])
+        strategy,sym,ac = order["strategy"],order["instrument_id"],order["account"]
+        direction,vol = order["type"],float(order["filled_qty"])
+        key = f"{strategy}-{sym}:{ac}"
+        pos_long,pos_short = self.pos_dict.get(key,[0,0])
 
         if direction =="1":
             pos_long += vol
-            self.new_pos_dict.update({f"long-{strategy}":pos_long})
+            self.new_pos_dict.update({f"long-{key}":pos_long})
         elif direction =="2":
             pos_short += vol
-            self.new_pos_dict.update({f"short-{strategy}":pos_short})
+            self.new_pos_dict.update({f"short-{key}":pos_short})
         elif direction =="3":
             pos_long -= vol
-            self.new_pos_dict.update({f"long-{strategy}":pos_long})
+            self.new_pos_dict.update({f"long-{key}":pos_long})
         elif direction =="4":
             pos_short -= vol
-            self.new_pos_dict.update({f"short-{strategy}":pos_short})
+            self.new_pos_dict.update({f"short-{key}":pos_short})
 
-        self.pos_dict[strategy] = [pos_long,pos_short]
-        self.db_client.update_one("pos",{"name":strategy},{"name":strategy,"long":pos_long,"short":pos_short})
+        self.pos_dict[key] = [pos_long,pos_short]
+        self.db_client.update_one(
+            "strategy",
+            {"alias":strategy},
+            {"tradePos":{f"{self.contract_reverse[sym]}:{ac}":[pos_long,pos_short]}})
     
 
     def find_key(self,account_name):
@@ -168,10 +175,13 @@ class position_span(object):
         self.fee = 0
         self.contract_value = 0
         self.trade_count = 0
+        self.winning_count = 0
+        self.winning_pnl = 0
         self.position_profit = 0
         self.instrument = instrument
         self.missing_open = []
         self.pnl_list = []
+        
 
     def add_up_buy_orders(self, price, qty):
         pre_price = self.long_price * self.long_qty
@@ -186,16 +196,24 @@ class position_span(object):
     def sell_long_holding(self, price, qty):
         #  平多盈亏： (合约面值 / 结算基准价 – 合约面值 / 平均平仓价格) * 平仓数量
         self.trade_count += 1
-        self.profit_loss += (( self.contract_value / self.long_price - self.contract_value / price ) * qty)
+        pnl = (( self.contract_value / self.long_price - self.contract_value / price ) * qty)
+        self.profit_loss += pnl
         self.long_qty -= qty
+        if pnl >0:
+            self.winning_count+=1
+            self.winning_pnl += pnl
         if not self.long_qty:
             self.long_price = 0
 
     def cover_short_holding(self, price, qty):
         #  平空盈亏： (合约面值 / 平均平仓价格 – 合约面值 / 结算基准价) * 平仓数量 
         self.trade_count += 1
-        self.profit_loss += (( self.contract_value / price - self.contract_value / self.short_price ) * qty)
+        pnl = (( self.contract_value / price - self.contract_value / self.short_price ) * qty)
+        self.profit_loss += pnl
         self.short_qty -= qty
+        if pnl >0:
+            self.winning_count+=1
+            self.winning_pnl += pnl
         if not self.short_qty:
             self.short_price = 0
 
@@ -246,7 +264,9 @@ def get_chart(strategy, json_obj):
     df = pd.DataFrame(json_obj)
     result={}
     statistics = {}
-    i=0
+
+    overview = {}
+    
     if df.size > 0:
         del df["_id"]
         data = df.sort_values(by = "datetime", ascending = True)
@@ -263,10 +283,14 @@ def get_chart(strategy, json_obj):
 
             # 缓存策略统计
             result[instrument] = pos_dict
-            
+
+        winning_count = 0
+        winning_pnl = 0
+        total_count = 0
+        total_pnl = 0
+
         for instrument, position in result.items():
             statistics[instrument] = {
-                "num":i,
                 "symbol" : instrument,
                 "trade_count" : position.trade_count,
                 "profit_loss" : position.profit_loss,
@@ -278,5 +302,27 @@ def get_chart(strategy, json_obj):
                 "missing_open" : position.missing_open,
                 "pnl": position.pnl_list
             }
-            i+=1
-    return statistics
+            winning_count+=position.winning_count
+            winning_pnl+=position.winning_pnl
+            total_count+=position.trade_count
+            total_pnl+=position.profit_loss
+
+        avg_win = 0
+        avg_loss = 0
+        pnl_ratio = 0
+        winning_rate = 0
+        if winning_count:
+            avg_win = winning_pnl / winning_count
+        if total_count-winning_count:
+            avg_loss = (total_pnl-winning_pnl) / (total_count-winning_count)
+        if avg_loss:
+            pnl_ratio = avg_win / avg_loss * -1
+        if total_count:
+            winning_rate = winning_count / total_count
+        overview={
+            "total_count" : total_count,
+            "winning_rate" : f"{winning_rate:0.2%}",
+            "pnl_ratio" : f"{pnl_ratio:0.2f}",
+            "detail":statistics
+        }
+    return overview

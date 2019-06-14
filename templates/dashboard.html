@@ -16,13 +16,13 @@
 {% end %}
 {% block body %}
 <a href="/dashboard/strategy/new" class="btn btn-xs btn-primary">New Strategy</a>
-&nbsp;<a href="/dashboard/task_sheet/all" class="btn btn-xs btn-primary">Tasks</a>
+&nbsp;<a href="/dashboard/tasks/all" class="btn btn-xs btn-primary">Tasks</a>
 {%if show=="all"%}
 &nbsp;<a href="/dashboard?display=all" class="btn btn-xs btn-primary">Show All</a>
 {%elif show=="mine"%}
 &nbsp;<a href="/dashboard" class="btn btn-xs btn-primary">Show Mine</a>
 {%end%}
-<form action="/dashboard/task_sheet/all" method="post" id="form">
+<!--<form action="/dashboard/tasks/all" method="post" id="form">-->
 {%if data%}
     <div class="table-responsive" style="margin-top: 10px">
         <table cellpadding="0" cellspacing="0" border="0" class="table-1" id="strategy_list">
@@ -33,7 +33,6 @@
                     <th>Server</th>
                     <th>Position as at <div id="time" style="display:inline"></div></th>
                     <th>Profile</th>
-                    <!-- <th>Operator</th> -->
                     <th>Update Time</th>
                 </tr>
             </thead>
@@ -44,11 +43,11 @@
                     <td><a href="/dashboard/strategy/{{d['_id']}}">{{d["name"]}}</a></td>
                     <td class="center">{{d["server"]}}</td>
                     <td>
-                        {%for sym in d['tradeSymbolList']%}
+                        {%for sym in d['tradePos']%}
                         <div>
                             <span style="font-size:12px">{{sym}}</span>
-                            <span class="label label-success" id="long-{{d['alias']}}" text-align="right"></span>
-                            <span class="label label-danger" id="short-{{d['alias']}}" text-align="right"></span>
+                            <span class="label label-success" id="long-{{d['alias']}}-{{sym}}" text-align="right">{{d['tradePos'][sym][0]}}</span>
+                            <span class="label label-danger" id="short-{{d['alias']}}-{{sym}}" text-align="right">{{d['tradePos'][sym][1]}}</span>
                         </div>
                         {%end%}
                     </td>
@@ -64,10 +63,11 @@
     </div>
     <div class="row">
         <input type="hidden" value="" id="hidTD" name="strategies">
-        <input type="button" class="btn btn-xs btn-primary" name="submit_checkbox" value="Add to Tasks">
+        <a href="javascript:;" class="btn btn-xs btn-primary" onclick="submit_task(this)">Create Task</a>
+        <div id="showResult"></div>
     </div>
 {% else %}
     no data
 {% end %}
-</form>
+<!--</form>-->
 {% end %}

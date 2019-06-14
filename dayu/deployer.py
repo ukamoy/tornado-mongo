@@ -54,7 +54,7 @@ class PortainerDeployer(object):
         else:
             self.grabServerInfo()
             if name not in self.serverMap:
-                raise KeyError("Server: %s not exists." % name)
+                return None
             else:
                 return self.getServerById(self.serverMap[name])
 

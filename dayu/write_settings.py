@@ -25,7 +25,7 @@ def zip_folder(startdir, file_news):
     return file_name_list[0]
 
 def cp_files(c, server_name, task_id):
-    stg_path = f"{working_path}/{task_id}/{server_name}"
+    stg_path = f"{working_path}/{task_id}"
     new_stg_list = zip_folder(stg_path, f"{stg_path}.zip")
 
     # c.local(f"tar -czvf {zip_path} {stg_path}") # Linux
@@ -47,12 +47,12 @@ def cp_files(c, server_name, task_id):
                 print("no exists: ",stg)
 
         # depress strategy
-        c.run(f"unzip {USER_HOME}/{server_name}.zip -d {target_folder}")
+        c.run(f"unzip {USER_HOME}/{task_id}.zip -d {target_folder}")
         # 获取解压出来的策略名
         t = c.run("ls")
         stg_list = t.stdout.split('\n')
     # 清理
-    c.run(f"rm {USER_HOME}/{server_name}.zip")
+    c.run(f"rm {USER_HOME}/{task_id}.zip")
 
     update_list = set(new_stg_list) &set(stg_list)
     return f" - 策略 {update_list} 成功推送到了服务器 {server_name} \n\n"

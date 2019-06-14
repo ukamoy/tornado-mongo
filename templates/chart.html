@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block head %}
 <script src="{{static_url('js/highcharts.js')}}"></script>
+<script src="{{static_url('js/echarts.min.js')}}"></script>
 <script>
 $(document).ready(
    function(){
@@ -15,9 +16,10 @@ $(document).ready(
       error:error,
       success:function(response){
          if(response){
-            var ss = "";
-            for(var ins in response){
-               var item = response[ins];
+            var ss="<ul>Overview:<li>Total Count: "+ response["total_count"] +"</li><li>Wining Ratio: "+ response["winning_rate"] +"</li><li>PnL Ratio: "+ response["pnl_ratio"]+"</li></ul>";
+            var data = response["detail"];
+            for(var ins in data){
+               var item = data[ins];
                ss+="<ul>"+ins+"<li>trade_count: "+item["trade_count"]+"</li>"+"<li>profit_loss: "+item["profit_loss"]+"</li>"+"<li>fee: "+item["fee"]+"</li>"+"<li>position_profit: "+item["position_profit"]+"</li>"+"<li>net_profit: "+item["net_profit"]+"</li>"+"<li>holding: long: "+item["holding_long"]+"  short: "+item["holding_short"]+"</li>";
                if(item["missing_open"]!=""){
                   ss+="<li>missing_open:</li>";
@@ -27,11 +29,10 @@ $(document).ready(
                };
                ss+="</ul><div id="+ins+" style='min-width: 310px; height: 400px; margin: 0 auto'></div>";
             };
-            if(ss==""){ss="no trades"};
             document.getElementById('stat').innerHTML = ss;
 
-            for(var ins in response){
-               render(ins,response[ins]["pnl"]);
+            for(var ins in data){
+               render(ins,data[ins]["pnl"]);
             };
          }else{
                document.getElementById('stat').innerHTML = "no trades";

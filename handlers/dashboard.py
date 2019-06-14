@@ -3,38 +3,18 @@ import tornado.web
 from handlers import BaseHandler
 from handlers.query import rotate_query, get_chart
 from dayu.util import filter_name, convertDatetime, dingding
+from dayu.write_settings import update_repo, prepare_stg_files
 import os,json,traceback,re
 from bson import ObjectId
 from datetime import datetime
 
-class dashboard2(BaseHandler):
-    @tornado.web.authenticated
-    @tornado.gen.coroutine
-    def get(self):
-        current_user = self.get_current_user()
-        qry = {"Author":current_user["name"]}
-        operator=True
-        show = ""
-        if not current_user["group"] == "zeus":
-            operator=False
-        if current_user["group"] in ["xinge","zeus"]:
-            show="all"
-            if self.get_argument("display",None):
-                qry = {}
-                show="mine"
-
-        json_obj = self.db_client.query("strategy",qry,[('_id', -1)])
-        self.render("dashboard2.html", title = "DASHBOARD", data=json_obj,operator=operator,show=show)
 class dashboard(BaseHandler):
     @tornado.web.authenticated
     @tornado.gen.coroutine
     def get(self):
         current_user = self.get_current_user()
         qry = {"Author":current_user["name"]}
-        operator=True
         show = ""
-        if not current_user["group"] == "zeus":
-            operator=False
         if current_user["group"] in ["xinge","zeus"]:
             show="all"
             if self.get_argument("display",None):
@@ -42,13 +22,13 @@ class dashboard(BaseHandler):
                 show="mine"
 
         json_obj = self.db_client.query("strategy",qry,[('_id', -1)])
-        self.render("dashboard.html", title = "DASHBOARD", data=json_obj,operator=operator,show=show)
+        self.render("dashboard.html", title = "DASHBOARD", data=json_obj,show=show)
 
 class strategy(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
         stgs = {} if args[0] =='new' else self.db_client.query_one("strategy",{"_id":ObjectId(args[0])}) 
-        self.render("strategy.html", title = "New Strategy", data = stgs)
+        self.render("strategy.html", title = "Strategy", data = stgs)
 
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):
@@ -61,16 +41,19 @@ class strategy(BaseHandler):
         
         sym_list=[]
         stgs["tradeSymbolList"] =[]
+        stgs["tradePos"] = {}
 
         for sym,ex,ac in zip(stgs["assist_symbols"],stgs["assist_symbols_ex"],stgs["assist_symbols_ac"]):
             sym_list.append(f"{sym}:{ex}_{ac}")
         for sym,ex,ac in zip(stgs["trade_symbols"],stgs["trade_symbols_ex"],stgs["trade_symbols_ac"]):
-            stgs["tradeSymbolList"].append(f"{sym}:{ex}_{ac}")
+            symbol = f"{sym}:{ex}_{ac}"
+            stgs["tradeSymbolList"].append(symbol)
+            stgs["tradePos"].update({symbol:[0,0]})
+
 
         for symbol in list(sym_list):
             if symbol in stgs["tradeSymbolList"]:
                 sym_list.remove(symbol)
-            
         stgs["symbolList"] = stgs["tradeSymbolList"] + sym_list
         
         stg_set = self.get_argument('strategy_setting', {})
@@ -94,58 +77,89 @@ class strategy(BaseHandler):
         self.redirect("/dashboard")
     
 
-class task_sheet(BaseHandler):
+class tasks(BaseHandler):
     @tornado.web.authenticated
     def get(self, *args, **kwargs):
         current_user = self.get_current_user()
-        if not args[0]=="all":
-            self.db_client.update_one("tasks",{"_id":ObjectId(args[0])},{"status":"withdrawn"})
-            dingding("deploy",f"{current_user['name']} withdrawn a task")
+        if args[0]=="all":
+            #self.db_client.update_one("tasks",{"_id":ObjectId(args[0])},{"status":"withdrawn"})
+            #dingding("deploy",f"{current_user['name']} withdrawn a task")
 
-        qry = {"Author":current_user["name"]}
-        json_obj = self.db_client.query("tasks",qry,[('_id', -1)])
-        self.render("task_sheet.html", title = "Task List", data = json_obj)
-
+            qry = {"Author":current_user["name"]}
+            Author = False
+            if current_user["group"]=="zeus":
+                qry={}
+                Author=True
+            json_obj = self.db_client.query("tasks",qry,[('_id', -1)])
+            self.render("tasks.html", title = "Task List", data = json_obj,Author=Author)
+        else:
+            task = self.db_client.query_one("tasks",{"task_id":args[0]})
+            stgs = task["strategies"]
+            json_obj = self.db_client.query("strategy",{"name":{"$in":stgs}}) 
+            servers = self.db_client.query("server",{},[('_id', -1)])
+            serv_name = list(map(lambda x: x["server_name"], servers))
+            self.render("task_info.html", title = f"TASK {args[0]}", data = json_obj, serv = serv_name, Author = task['Author'], task_id=args[0], status=task["status"])
+  
     def post(self, *args, **kwargs):
         current_user = self.get_current_user()
         task_id = datetime.now().strftime("%Y%m%d%H%M%S%f")[:-3]
-        stgs = json.loads(self.get_argument('strategies'))
-
+        stgs = list(self.request.arguments.keys())
+        
         args = {
             "task_id" : task_id,
             "Author" : current_user["name"],
             "status" : "submitted",
-            "strategies" : list(map(lambda x: x["name"],stgs))
+            "strategies" : stgs
             }
-        
+        msg = self.assign_task(stgs,task_id)
         self.db_client.insert_one("tasks", args)
-        dingding("deploy",f"{args['Author']} submitted new task \n\nid: {args['task_id']}")
-        self.redirect("/dashboard/task_sheet/all")
+        #dingding("deploy",f"{args['Author']} submitted new task \n\nid: {args['task_id']}\n\n{msg}")
+        self.finish(json.dumps(task_id))
 
+    def assign_task(self, stgs, task_id):
+        # get strategies
+        json_obj = self.db_client.query("strategy",{"name":{"$in":stgs}})
+        
+        # gether required keys
+        key_chain = {}
+        key_list = list(map(lambda x: x['trade_symbols_ac'] + x['assist_symbols_ac'], json_obj))
+        key_list = [i for k in key_list for i in k]
+        key_list = self.db_client.query("account",{"name":{"$in":list(set(key_list))}})
+
+        for key in key_list:
+            key_chain.update({key["name"]:[key["apikey"],key["secretkey"],key["passphrase"]]})
+        
+        # update repo
+        msg = update_repo()
+        prepare_stg_files(json_obj, task_id, key_chain)
+
+        stg_names = list(map(lambda x: x["name"],json_obj))
+        msg+= f"> strategy settings ready for : \n\n{stg_names}"
+        return msg
 class chart(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
         strategy = args[0]
-        json_obj = self.db_client.query("orders",{"strategy":strategy})
-        result = get_chart(strategy, json_obj)
-        self.render("chart.html", title = f"{strategy} Chart",data=result)
+        self.render("chart.html", title = f"{strategy} Chart")
     def post(self,*args,**kwargs):
         strategy = args[0]
         json_obj = self.db_client.query("orders",{"strategy":strategy})
-        result = get_chart(strategy, json_obj)
-        self.finish(json.dumps(result))
+        stat = get_chart(strategy, json_obj)
+        self.finish(json.dumps(stat))
 
 class orders(BaseHandler):
     @tornado.web.authenticated
     @tornado.gen.coroutine
     def get(self):
+        r = {}
+        enquiry = True
+        name = "FIND"
         if self.get_argument("name",None):
             name=self.get_argument("name")
-            qry={"strategy":name}
-            r=self.db_client.query("orders",qry,[('datetime', -1)])
-            self.render("orders.html", title = f"{name} ORDERS", data=r,enquiry=False)
-        else:
-            self.render("orders.html", title = "FIND ORDERS", data="",enquiry=True)
+            r=self.db_client.query("orders",{"strategy":name},[('datetime', -1)])
+            enquiry=False
+        self.render("orders.html", title = f"{name} ORDERS", data=r, enquiry=enquiry)
+        
     @tornado.gen.coroutine
     def post(self):
         result = []
@@ -167,10 +181,6 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
     users = set()  # 用来存放在线用户的容器
     def open(self):
         self.users.add(self)  # 建立连接后添加用户到容器中
-        for strategy,pos in self.pos_dict.items():
-            self.on_message(json.dumps({"_name":f"long-{strategy}","_val":pos[0]}))
-            self.on_message(json.dumps({"_name":f"short-{strategy}","_val":pos[1]}))
-
         self.on_message(json.dumps({"_name":"time","_val":datetime.now().strftime("%H:%M:%S")}))
 
     def on_close(self):
@@ -192,9 +202,8 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
 
 handlers = [
     (r"/dashboard", dashboard), 
-    (r"/dashboard2", dashboard2), 
     (r"/dashboard/strategy/([a-zA-Z0-9]+)", strategy), 
-    (r"/dashboard/task_sheet/([a-zA-Z0-9]+)", task_sheet), 
+    (r"/dashboard/tasks/([a-zA-Z0-9]+)", tasks), 
     (r"/pos", posHandler),
     (r"/orders", orders),
     (r"/chart/([a-zA-Z0-9]+)", chart),

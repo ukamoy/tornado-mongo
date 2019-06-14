@@ -14,84 +14,79 @@ class operator(BaseHandler):
     @tornado.web.authenticated
     @tornado.gen.coroutine
     def post(self,*args, **kwargs):
-        current_user = self.get_current_user()
-        if not current_user["group"] == "zeus":
-            return False
         stg_name = self.get_argument('name',None)
         method = self.get_argument('method',None)
         task_id = self.get_argument('task_id',None)
-
-        json_obj = self.db_client.query_one("strategy",{"name":stg_name}) 
-        server = get_server(json_obj['server'])
+        path = f"{working_path}/{task_id}" # 策略文件夹路径
+        server_name = self.get_argument('server',None)
+        server = get_server(server_name)
         res=False
+
         if server:
             container = server.get(stg_name)
             if method and stg_name:
                 if method == "halt":
-                    res=self.halt(server, container, stg_name)
+                    if container:
+                        if container.status == "running":
+                            res = self.halt(server, stg_name, path)
+                        else:
+                            return self.finish(json.dumps({"error":"container not running"}))
+                    else:
+                        return self.finish(json.dumps({"error":"container not exists"}))
                 elif method == "launch":
-                    res=self.launch(server, container, stg_name, task_id)
+                   
+                    res = self.launch(server, container, stg_name, path)
+                    if res:
+                        self.db_client.update_one("strategy",{"name":stg_name},{"server":server_name})
+                elif method == "archive":
+                    res = self.archive(server, stg_name, path, status=1)
             else:
-                raise tornado.web.HTTPError(403)
-        self.finish(json.dumps(res))
-            
-    def launch(self, server, container, strategy, task_id):
-        running = False
-        if container:
-            # 如果容器已经在运行, 则跳过下面一系列步骤
-            if container.status == "running":
-                print(f"Strategy: {strategy} already running.")
-                running = True
-            else:
-                command = input("Strategy container already exists, do you want to proceed? [y/n]: ")
-                if command == "y":
-                    print(f"container status: {container.status}")
-                else:
-                    print("Exit.")
-                    return 
+                return self.finish(json.dumps({"error":"params not exists"}))
         else:
-            # 使用指定{IMAGE}创建策略{strategy} 
+            if method == "archive":
+                res =  self.archive(server, stg_name, path, status=0)
+            else:
+                return self.finish(json.dumps({"error":"server not exists"}))
+
+        self.finish(json.dumps({"result":res}))
+
+    def launch(self, server, container, strategy, path):
+        running = False
+        if not container:
             r = server.create(
                 IMAGE, # 镜像名
                 strategy, # 策略名
-                f"{working_path}/{task_id}/{strategy}" # 策略文件夹路径
+                f"{path}/{strategy}"
             )
             print(r)
             assert r, "Strategy not deployed properly."
-
-            # 获取当前策略快照并保存到本地，该快照可以供策略师确认配置
-            # archive = server.archive(strategy)
-            # with open(f"{strategy}-created.tar", "wb") as f:
-            #     f.write(archive)
         
         if not running:
-            if input("Do you want to start strategy now? [y/n]: ") != "y":
-                print("Exit.")
-                return True
-
-            # 策略师确认后运行策略。
             status = server.start(strategy)
             print(status)
+            running = True
             assert status == "running", f"Status of {strategy} is not [running] but [{status}]" 
         return running
 
-    def halt(self, server, container, strategy):
-        while container.status == "running":
-            command = input("Enter command:\ns: Stop strategy\ne: Exit\n")
-            if command == "s":
-                break
-            elif command == "e":
-                return 
-            container.reload()
+    def halt(self, server, strategy, path):
+        r = server.stop(strategy)
+        print("halt result",r)
+        
+        if r:
+            archive = server.archive(strategy)
+            with open(f"{path}/{strategy}-latest.tar", "wb") as f:
+                f.write(archive)
+            
+            self.db_client.update_one("strategy",{"name":strategy},{"server":"idle"})
+            server.remove(strategy)
+        return r
 
-        # 如果容器在运行，则停止容器。
-        container = server.get(strategy)
-        if container.status == "running":
-            r = server.stop(strategy)
-            print(r)
-        server.remove(strategy)
-        self.db_client.update_one("strategy",{"name":strategy},{"server":"idle"})
-        return True
+    def archive(self, server, strategy, path, status):
+        if status:
+            archive = server.archive(strategy)
+            with open(f"{path}/{strategy}-latest.tar", "wb") as f:
+                f.write(archive)
+        return f"{strategy}-latest.tar"
 
 class old_operator(BaseHandler):
     @tornado.web.authenticated
@@ -165,7 +160,7 @@ class mainipulator(BaseHandler):
     @tornado.web.authenticated
     @tornado.gen.coroutine
     def get(self,*args,**kwargs):
-        print("conn get",args, self.request.arguments, "body:", self.request.body_arguments)
+        print("mainipulator get",args, self.request.arguments, "body:", self.request.body_arguments)
         if self.get_argument("checkName", None):
             qry = filter_name(self.get_argument("checkName"))
             r = self.db_client.query_one("strategy",{"alias":qry})
@@ -189,8 +184,19 @@ class mainipulator(BaseHandler):
             msg = True if r else False
             self.finish(json.dumps(msg))
         elif self.get_argument("getAccount", None):
-            self.finish(self.ac_dict)
+            json_obj = self.db_client.query("exchange",{})
+            ac_dict = {}
+            for ex in json_obj:
+                ac_dict.update({ex["name"]:[ex["keys"],ex["symbols"]]})
+            self.finish(ac_dict)
             return
+    @tornado.gen.coroutine
+    def post(self,*args,**kwargs):
+        print("mainipulator post",args, self.request.arguments, "body:", self.request.body_arguments)
+        if self.get_argument("change_status",None):
+            n = self.get_argument("change_status")
+            s = self.get_argument("status")
+            self.db_client.update_one("strategy",{"name":n},{"status":int(s)})
 
 class public(BaseHandler):
     @tornado.gen.coroutine

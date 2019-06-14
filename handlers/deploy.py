@@ -30,15 +30,15 @@ class deploy(BaseHandler):
 class assignment(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
-        # current_user = self.get_current_user()
-        # if not current_user["group"] == "zeus":
-        #     return self.redirect("/dashboard")
+        current_user = self.get_current_user()
+        if not current_user["group"] == "zeus":
+            return self.redirect("/dashboard")
         task = self.db_client.query_one("tasks",{"task_id":args[0]})
         stgs = task["strategies"]
         json_obj = self.db_client.query("strategy",{"name":{"$in":stgs}}) 
         servers = self.db_client.query("server",{},[('_id', -1)])
-        serv_name = list(map(lambda x: x["server_name"],servers))
-        self.render("task_info.html", title = "ASSIGN SERVER", data = json_obj, serv = serv_name, Author = task['Author'], task_id=args[0])
+        serv_name = list(map(lambda x: x["server_name"], servers))
+        self.render("assign.html", title = "ASSIGN SERVER", data = json_obj, serv = serv_name, Author = task['Author'], task_id=args[0], status=task["status"])
     
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):
@@ -51,31 +51,13 @@ class assignment(BaseHandler):
         # prepare strategy
         Author = self.get_argument('Author')
         task_id = self.get_argument('task_id')
-        msg = self.assign_task(_ids, task_id)
+        servers = self.db_client.query("server",{"server_name":{"$in":server_name}})
+        for server in servers:
+            c = server_conn(server["server_ip"])
+            msg = cp_files(c, server["server_name"], task_id)
         self.db_client.update_one("tasks",{"task_id":task_id,"Author":Author},{"status":"assigned"})
-        dingding("deploy", f"{Author}'s task {task_id} assigned \n\n {msg}")
+        print("deploy", f"{Author}'s task {task_id} assigned \n\n {msg}")
         self.redirect(f"/deploy/assignment/{task_id}")
-
-    def assign_task(self, _ids, task_id):
-        # get strategies
-        json_obj = self.db_client.query("strategy",{"_id":{"$in":mongo_obj(_ids)}})
-        
-        # gether required keys
-        key_chain = {}
-        key_list = list(map(lambda x: x['trade_symbols_ac'] + x['assist_symbols_ac'], json_obj))
-        key_list = [i for k in key_list for i in k]
-        key_list = self.db_client.query("account",{"name":{"$in":list(set(key_list))}})
-
-        for key in key_list:
-            key_chain.update({key["name"]:[key["apikey"],key["secretkey"],key["passphrase"]]})
-        
-        # update repo
-        msg = update_repo()
-        prepare_stg_files(json_obj, task_id, key_chain)
-
-        stg_names = list(map(lambda x: x["name"],json_obj))
-        msg+= f"> strategy settings ready for : \n\n{stg_names}"
-        return msg
 
 class server(BaseHandler):
     @tornado.web.authenticated

@@ -53,6 +53,29 @@ function trasfer_data(obj){
 	var tds = $(tr).find("td");
 	$.get("/deploy/assignment", {"stgs":$(tds[4]).html()});
 }
+
+function submit_task(obj){
+    var result = gether_checkbox();
+    if(result.length==0){
+        alert("please pick strategy");
+    }else{
+        $.ajax({
+            url:"/dashboard/tasks/add",
+            type: "POST",
+            dataType:"json",
+            data: result,
+            beforeSend:task_processing(obj),
+            error:restore_button(obj),
+            success:function(response){
+                if(response){
+                    window.location.href="/dashboard/tasks/"+response;
+                }else{
+                    alert("failed");
+                }
+            },
+        });
+    };
+}
 function withdraw(obj){
     var tr = obj.parentNode.parentNode;
     var tds = $(tr).find("td");
@@ -257,11 +280,12 @@ function old_operator(obj) {
         dataType:"json",
         data: {"name":name,"method":method},
         beforeSend:task_processing(obj),
+        complete:task_complete,
         error:restore_button(obj),
         success:function(response){
             if(response){
                 if (method=="halt"){
-                    $(tds[2]).html("idle");
+                    $(tds[1]).html("idle");
                     alert(name+" halted");};
             }else{
                 restore_button(obj);
@@ -275,23 +299,49 @@ function operator(obj) {
     var method = s[0];
     var name = s[1];
     var task_id = s[2];
-    var tr = obj.parentNode.parentNode;
-	var tds = $(tr).find("td");
+    
+    var select = document.getElementById("server-"+name);
+    var index = select.selectedIndex;
+    var server = select.options[index].text;
+    if(server=="idle" & method!="archive"){return alert("please choose server");};
 
     $.ajax({
         url:"/operator",
         type: "POST",
         dataType:"json",
-        data: {"method":method, "name":name, "task_id":task_id},
+        data: {"method":method, "name":name, "task_id":task_id,"server":server},
         beforeSend:task_processing(obj),
         error:restore_button(obj),
+        complete:task_complete,
         success:function(response){
-            alert(response);
             if(response){
+                if ("error" in response){
+                    return alert(response["error"]);
+                }else{
                 if (method=="halt"){
-                    $(tds[2]).html("idle");
-                    alert(name+" halted");};
-                
+                    select.value = "idle";
+                    $(obj).attr("disabled","disabled");
+                    $(obj).css("pointer-events","none");
+                    var t = obj.name.split("-");
+                    var new_obj = document.getElementsByName("launch-"+t[1]+"-"+t[2]);
+                    $(new_obj).attr("disabled",false);
+                    $(new_obj).css("pointer-events","auto");
+                    $.post("/dy",{"change_status":name,"status":0});
+                    alert(name+" halted");
+
+                }else if(method=="launch"){
+                    $(obj).attr("disabled","disabled");
+                    $(obj).css("pointer-events","none");
+                    var t = obj.name.split("-");
+                    var new_obj = document.getElementsByName("halt-"+t[1]+"-"+t[2]);
+                    $(new_obj).attr("disabled",false);
+                    $(new_obj).css("pointer-events","auto");
+                    $.post("/dy",{"change_status":name,"status":1});
+                    alert(name+"  launched");
+                }else if(method=="archive"){
+                    window.open("/static/Strategy/"+task_id+"/"+response["result"])
+                    };
+                }
             }else{
                 restore_button(obj);
                 alert(name+" "+method+" operation failed");
@@ -303,10 +353,24 @@ function operator(obj) {
 function task_processing(obj){
     $(obj).attr("disabled","disabled");
     $(obj).css("pointer-events","none");
+    var zhezhao=document.getElementById("zhezhao"); 
+    var msg=document.getElementById("msg"); 
+    zhezhao.style.display="block"; 
+    msg.style.display="block"; 
+}
+function task_complete(){
+    var zhezhao=document.getElementById("zhezhao"); 
+    var msg=document.getElementById("msg"); 
+    zhezhao.style.display="none"; 
+    msg.style.display="none"; 
 }
 function restore_button(obj){
     $(obj).attr("disabled",false);
     $(obj).css("pointer-events","auto");
+    var zhezhao=document.getElementById("zhezhao"); 
+    var msg=document.getElementById("msg"); 
+    zhezhao.style.display="none"; 
+    msg.style.display="none"; 
 }
 
 function render(instrument,pnl){
