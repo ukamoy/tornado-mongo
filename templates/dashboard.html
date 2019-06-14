@@ -14,7 +14,7 @@
     }
 </script>
 {% end %}
-{% block body %}
+{% block body %} 
 <a href="/dashboard/strategy/new" class="btn btn-xs btn-primary">New Strategy</a>
 &nbsp;<a href="/dashboard/tasks/all" class="btn btn-xs btn-primary">Tasks</a>
 {%if show=="all"%}
@@ -62,9 +62,7 @@
         </table>
     </div>
     <div class="row">
-        <input type="hidden" value="" id="hidTD" name="strategies">
         <a href="javascript:;" class="btn btn-xs btn-primary" onclick="submit_task(this)">Create Task</a>
-        <div id="showResult"></div>
     </div>
 {% else %}
     no data

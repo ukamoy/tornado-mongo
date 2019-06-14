@@ -64,13 +64,14 @@ function submit_task(obj){
             type: "POST",
             dataType:"json",
             data: result,
-            beforeSend:task_processing(obj),
-            error:restore_button(obj),
+            beforeSend:task_processing,
+            error:null,
+            complete:task_complete,
             success:function(response){
                 if(response){
                     window.location.href="/dashboard/tasks/"+response;
                 }else{
-                    alert("failed");
+                    alert("create task failed");
                 }
             },
         });
@@ -310,9 +311,9 @@ function operator(obj) {
         type: "POST",
         dataType:"json",
         data: {"method":method, "name":name, "task_id":task_id,"server":server},
-        beforeSend:task_processing(obj),
-        error:restore_button(obj),
+        beforeSend:task_processing,
         complete:task_complete,
+        error:null,
         success:function(response){
             if(response){
                 if ("error" in response){
@@ -350,9 +351,7 @@ function operator(obj) {
     });
 }
 
-function task_processing(obj){
-    $(obj).attr("disabled","disabled");
-    $(obj).css("pointer-events","none");
+function task_processing(){
     var zhezhao=document.getElementById("zhezhao"); 
     var msg=document.getElementById("msg"); 
     zhezhao.style.display="block"; 
@@ -365,8 +364,8 @@ function task_complete(){
     msg.style.display="none"; 
 }
 function restore_button(obj){
-    $(obj).attr("disabled",false);
-    $(obj).css("pointer-events","auto");
+    //$(obj).attr("disabled",false);
+    //$(obj).css("pointer-events","auto");
     var zhezhao=document.getElementById("zhezhao"); 
     var msg=document.getElementById("msg"); 
     zhezhao.style.display="none"; 

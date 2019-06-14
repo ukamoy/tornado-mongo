@@ -113,7 +113,7 @@ class tasks(BaseHandler):
             }
         msg = self.assign_task(stgs,task_id)
         self.db_client.insert_one("tasks", args)
-        #dingding("deploy",f"{args['Author']} submitted new task \n\nid: {args['task_id']}\n\n{msg}")
+        dingding("deploy",f"{args['Author']} submitted new task \n\nid: {args['task_id']}\n\n{msg}")
         self.finish(json.dumps(task_id))
 
     def assign_task(self, stgs, task_id):
@@ -127,14 +127,17 @@ class tasks(BaseHandler):
         key_list = self.db_client.query("account",{"name":{"$in":list(set(key_list))}})
 
         for key in key_list:
-            key_chain.update({key["name"]:[key["apikey"],key["secretkey"],key["passphrase"]]})
+            key_chain.update({key["name"]:[key["apikey"],key["secretkey"],key["passphrase"],key["future_leverage"]]})
         
         # update repo
         msg = update_repo()
-        prepare_stg_files(json_obj, task_id, key_chain)
-
-        stg_names = list(map(lambda x: x["name"],json_obj))
-        msg+= f"> strategy settings ready for : \n\n{stg_names}"
+        try:
+            prepare_stg_files(json_obj, task_id, key_chain)
+            stg_names = list(map(lambda x: x["name"],json_obj))
+            msg+= f"> strategy settings ready for : \n\n{stg_names}"
+        except Exception as e:
+            msg = False
+        
         return msg
 class chart(BaseHandler):
     @tornado.web.authenticated
@@ -192,7 +195,7 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
 
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):
-        print(datetime.now().strftime("%y%m%d %H:%M:%S"),"pos.post", args, self.request.arguments, "body:", self.request.body_arguments)
+        print(datetime.now().strftime("%y%m%d %H:%M:%S"),"pos.post body:", self.request.body_arguments)
         pos = self.request.arguments
         if pos:
             for name,val in pos.items():

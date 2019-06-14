@@ -96,7 +96,7 @@ def prepare_stg_files(data,task_id,key_chain):
                     "apiSecret": key_chain[ac][1],
                     "passphrase": key_chain[ac][2],
                     "symbols": list(map(lambda x: x.split(":")[0], stg["symbolList"])),
-                    "future_leverage": 20,
+                    "future_leverage": key_chain[ac][3],
                     "swap_leverage": 100,
                     "margin_token": 0,
                     "sessionCount": 3,

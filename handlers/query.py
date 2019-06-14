@@ -40,6 +40,7 @@ class rotate_query(object):
 
         symbols=set()
         json_obj = self.db_client.query("strategy",{"server":{"$ne":"idle"}})
+
         for stg in json_obj:
             for sym in stg["symbolList"]:
                 symbols.add(sym)
@@ -112,7 +113,8 @@ class rotate_query(object):
     def update_pos(self, order):
         strategy,sym,ac = order["strategy"],order["instrument_id"],order["account"]
         direction,vol = order["type"],float(order["filled_qty"])
-        key = f"{strategy}-{sym}:{ac}"
+        vt_ac = f"{self.contract_reverse[sym]}:{ac}"
+        key = f"{strategy}-{vt_ac}"
         pos_long,pos_short = self.pos_dict.get(key,[0,0])
 
         if direction =="1":
@@ -129,10 +131,11 @@ class rotate_query(object):
             self.new_pos_dict.update({f"short-{key}":pos_short})
 
         self.pos_dict[key] = [pos_long,pos_short]
-        self.db_client.update_one(
-            "strategy",
-            {"alias":strategy},
-            {"tradePos":{f"{self.contract_reverse[sym]}:{ac}":[pos_long,pos_short]}})
+        if strategy:
+            self.db_client.update_one(
+                "strategy",
+                {"alias":strategy},
+                {"tradePos":{vt_ac:[pos_long,pos_short]}})
     
 
     def find_key(self,account_name):
