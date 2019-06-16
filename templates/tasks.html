@@ -8,22 +8,26 @@
         <thead>
             <tr>
                 <th>Task ID</th>
-                {%if Author%}
+                {%if admin%}
                 <th>Author</th>
                 {%end%}
                 <th>Status</th>
-                <th>Strategy List</th>
+                <th>Strategy</th>
             </tr>
         </thead>
         <tbody>
             {% for d in data %}
             <tr>
                 <td><a href="/dashboard/tasks/{{d['task_id']}}">{{d["task_id"]}}</a></td></td>
-                {%if Author%}
-                <th>{{d["Author"]}}</th>
+                {%if admin%}
+                <td>{{d["Author"]}}</td>
                 {%end%}
                 <td>{{d["status"]}}</td>
-                <td>{{d["strategies"]}}</td>
+                <td>
+                    {%for stg in d["strategies"]%}
+                    &nbsp;{{stg}};
+                    {%end%}
+                </td>
             </tr>
             {% end %}
         </tbody>

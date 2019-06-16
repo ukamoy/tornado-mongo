@@ -16,7 +16,7 @@ $(document).ready(
       error:error,
       success:function(response){
          if(response){
-            var ss="<ul>Overview:<li>Total Count: "+ response["total_count"] +"</li><li>Wining Ratio: "+ response["winning_rate"] +"</li><li>PnL Ratio: "+ response["pnl_ratio"]+"</li></ul>";
+            var ss="<ul>Overview:<li>Total Count: "+ response["total_count"] +"</li><li>Winning Ratio: "+ response["winning_rate"] +"</li><li>PnL Ratio: "+ response["pnl_ratio"]+"</li></ul>";
             var data = response["detail"];
             for(var ins in data){
                var item = data[ins];
@@ -32,7 +32,7 @@ $(document).ready(
             document.getElementById('stat').innerHTML = ss;
 
             for(var ins in data){
-               render(ins,data[ins]["pnl"]);
+               render(ins, data[ins]["pnl"], data[ins]["qty"]);
             };
          }else{
                document.getElementById('stat').innerHTML = "no trades";

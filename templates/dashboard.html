@@ -45,7 +45,7 @@
                     <td>
                         {%for sym in d['tradePos']%}
                         <div>
-                            <span style="font-size:12px">{{sym}}</span>
+                            <span style="font-size:12px; width:80%;">{{sym}}</span>
                             <span class="label label-success" id="long-{{d['alias']}}-{{sym}}" text-align="right">{{d['tradePos'][sym][0]}}</span>
                             <span class="label label-danger" id="short-{{d['alias']}}-{{sym}}" text-align="right">{{d['tradePos'][sym][1]}}</span>
                         </div>

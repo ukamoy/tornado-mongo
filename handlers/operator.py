@@ -19,73 +19,62 @@ class operator(BaseHandler):
         task_id = self.get_argument('task_id',None)
         path = f"{working_path}/{task_id}" # 策略文件夹路径
         server_name = self.get_argument('server',None)
+
+        if server_name =="idle" and method == "archive":
+            return self.finish(json.dumps({"result":f"{stg_name}-latest.tar"}))
+
         server = get_server(server_name)
         res=False
 
         if server:
             container = server.get(stg_name)
             if method and stg_name:
+                now = int(datetime.now().timestamp()*1000)
                 if method == "halt":
                     if container:
                         if container.status == "running":
-                            res = self.halt(server, stg_name, path)
+                            status = server.stop(stg_name)
+                            if status=="exited":
+                                self.db_client.update_one("strategy",{"name":stg_name},{"server":"idle","status":0})
+                                self.db_client.insert_one("operation",{"name":stg_name,"op":0,"timestamp":now})
+                                r=self.archive(server, stg_name, path)
+                                server.remove(stg_name)
+                                res=True
+                            else:
+                                return self.finish(json.dumps({"error":"operation halt failed"}))
                         else:
                             return self.finish(json.dumps({"error":"container not running"}))
                     else:
                         return self.finish(json.dumps({"error":"container not exists"}))
                 elif method == "launch":
+                    if not container:
+                        r = server.create(
+                            IMAGE, # 镜像名
+                            stg_name, # 策略名
+                            f"{path}/{stg_name}"
+                        )
+                        print("create container:",r)
                    
-                    res = self.launch(server, container, stg_name, path)
-                    if res:
-                        self.db_client.update_one("strategy",{"name":stg_name},{"server":server_name})
+                    status = server.start(stg_name)
+                    if status == "running":
+                        res=True
+                        self.db_client.update_one("strategy",{"name":stg_name},{"server":server_name,"status":1})
+                        self.db_client.insert_one("operation",{"name":stg_name,"op":1,"timestamp":now})
+
                 elif method == "archive":
-                    res = self.archive(server, stg_name, path, status=1)
+                    print(111)
+                    res = self.archive(server, stg_name, path)
             else:
                 return self.finish(json.dumps({"error":"params not exists"}))
         else:
-            if method == "archive":
-                res =  self.archive(server, stg_name, path, status=0)
-            else:
-                return self.finish(json.dumps({"error":"server not exists"}))
+            return self.finish(json.dumps({"error":"server not exists"}))
 
         self.finish(json.dumps({"result":res}))
 
-    def launch(self, server, container, strategy, path):
-        running = False
-        if not container:
-            r = server.create(
-                IMAGE, # 镜像名
-                strategy, # 策略名
-                f"{path}/{strategy}"
-            )
-            print(r)
-            assert r, "Strategy not deployed properly."
-        
-        if not running:
-            status = server.start(strategy)
-            print(status)
-            running = True
-            assert status == "running", f"Status of {strategy} is not [running] but [{status}]" 
-        return running
-
-    def halt(self, server, strategy, path):
-        r = server.stop(strategy)
-        print("halt result",r)
-        
-        if r:
-            archive = server.archive(strategy)
-            with open(f"{path}/{strategy}-latest.tar", "wb") as f:
-                f.write(archive)
-            
-            self.db_client.update_one("strategy",{"name":strategy},{"server":"idle"})
-            server.remove(strategy)
-        return r
-
-    def archive(self, server, strategy, path, status):
-        if status:
-            archive = server.archive(strategy)
-            with open(f"{path}/{strategy}-latest.tar", "wb") as f:
-                f.write(archive)
+    def archive(self, server, strategy, path):
+        archive = server.archive(strategy)
+        with open(f"{path}/{strategy}-latest.tar", "wb") as f:
+            f.write(archive)
         return f"{strategy}-latest.tar"
 
 class old_operator(BaseHandler):
@@ -189,7 +178,7 @@ class mainipulator(BaseHandler):
             for ex in json_obj:
                 ac_dict.update({ex["name"]:[ex["keys"],ex["symbols"]]})
             self.finish(ac_dict)
-            return
+
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):
         print("mainipulator post",args, self.request.arguments, "body:", self.request.body_arguments)

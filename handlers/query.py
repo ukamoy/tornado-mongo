@@ -5,7 +5,6 @@ from dayu.db_conn import db_client
 import os,json,traceback,re
 from datetime import datetime
 from dayu.util import convertDatetime, dingding
-from config import auth
 from urllib.parse import urlencode
 import hmac
 import base64
@@ -26,7 +25,6 @@ class rotate_query(object):
         self.contract_map = {}
         self.contract_reverse = {}
         self.pos_dict={}
-        self.cookies={"auth":auth}
         self.new_pos_dict={}
         self.mapping = {"1":"开多","2":"开空","3":"平多","4":"平空"}
 
@@ -42,18 +40,14 @@ class rotate_query(object):
         json_obj = self.db_client.query("strategy",{"server":{"$ne":"idle"}})
 
         for stg in json_obj:
-            for sym in stg["symbolList"]:
+            for sym,pos in stg["tradePos"].items():
                 symbols.add(sym)
-            self.pos_dict.update(stg["tradePos"])
+                self.pos_dict.update({f"{stg['alias']}-{sym}":pos})
         for sym in list(symbols):
             s,vt_ac = sym.split(":")
             ss = self.active_ac.get(vt_ac,set())
             ss.add(s)
             self.active_ac.update({vt_ac:ss})
-
-        #json_obj = self.db_client.query("pos",{})
-        #for pos in json_obj:
-        #    self.pos_dict.update({pos["name"]:[pos["long"],pos["short"]]})
 
         self.store()
 
@@ -87,7 +81,7 @@ class rotate_query(object):
             client.fetch(url,method='POST',body=body)
             self.new_pos_dict={}
         except Exception as e:
-            print(e)
+            print("client.fetch failed. reason:",e)
 
         if success:
             msg={}
@@ -184,6 +178,7 @@ class position_span(object):
         self.instrument = instrument
         self.missing_open = []
         self.pnl_list = []
+        self.qty_list = []
         
 
     def add_up_buy_orders(self, price, qty):
@@ -262,6 +257,7 @@ def process_orders(order_data, pos_dict):
             pos_dict.cover_short_holding(order_price, order_qty)
         t= int(order['datetime'].timestamp()*1000)
         pos_dict.pnl_list.append([t,pos_dict.profit_loss])
+        pos_dict.qty_list.append([t,order_qty])
 
 def get_chart(strategy, json_obj):
     df = pd.DataFrame(json_obj)
@@ -303,7 +299,8 @@ def get_chart(strategy, json_obj):
                 "holding_long" : position.long_qty,
                 "holding_short" : position.short_qty,
                 "missing_open" : position.missing_open,
-                "pnl": position.pnl_list
+                "pnl": position.pnl_list,
+                "qty":position.qty_list
             }
             winning_count+=position.winning_count
             winning_pnl+=position.winning_pnl

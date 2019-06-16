@@ -54,7 +54,7 @@ class PortainerDeployer(object):
         else:
             self.grabServerInfo()
             if name not in self.serverMap:
-                return None
+                raise KeyError("Server: %s not exists." % name)
             else:
                 return self.getServerById(self.serverMap[name])
 
@@ -74,10 +74,10 @@ class ServerDeployer(object):
             command="vnpy run terminal",
             name=name,
             network_mode="host",
-            working_dir="/strategy",
+            working_dir=f"/{name}",
             volumes={
-                f"{name}": {
-                    "bind": "/strategy",
+                name: {
+                    "bind": f"/{name}",
                     "mode": "rw"
                 },
                 "/etc/localtime": {
@@ -93,9 +93,9 @@ class ServerDeployer(object):
         if isinstance(source, bytes):
             archive = source
         else:
-            archive = makeArchive("strategy", source)
+            archive = makeArchive(name, source)
         return container.put_archive(
-            "/strategy",
+            f"/{name}",
             archive
         )
     
@@ -119,7 +119,7 @@ class ServerDeployer(object):
     def archive(self, name):
         self.keeper.ensureAuth()
         container = self.client.containers.get(name)
-        bits, stat = container.get_archive("/strategy")
+        bits, stat = container.get_archive(f"/{name}")
         print(stat)
         bio = BytesIO()
         for chunk in bits:

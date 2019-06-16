@@ -82,20 +82,16 @@ class tasks(BaseHandler):
     def get(self, *args, **kwargs):
         current_user = self.get_current_user()
         if args[0]=="all":
-            #self.db_client.update_one("tasks",{"_id":ObjectId(args[0])},{"status":"withdrawn"})
-            #dingding("deploy",f"{current_user['name']} withdrawn a task")
-
             qry = {"Author":current_user["name"]}
-            Author = False
+            admin = False
             if current_user["group"]=="zeus":
                 qry={}
-                Author=True
+                admin=True
             json_obj = self.db_client.query("tasks",qry,[('_id', -1)])
-            self.render("tasks.html", title = "Task List", data = json_obj,Author=Author)
+            self.render("tasks.html", title = "Task List", data = json_obj,admin=admin)
         else:
             task = self.db_client.query_one("tasks",{"task_id":args[0]})
-            stgs = task["strategies"]
-            json_obj = self.db_client.query("strategy",{"name":{"$in":stgs}}) 
+            json_obj = self.db_client.query("strategy",{"name":{"$in":task["strategies"]}}) 
             servers = self.db_client.query("server",{},[('_id', -1)])
             serv_name = list(map(lambda x: x["server_name"], servers))
             self.render("task_info.html", title = f"TASK {args[0]}", data = json_obj, serv = serv_name, Author = task['Author'], task_id=args[0], status=task["status"])
@@ -113,7 +109,7 @@ class tasks(BaseHandler):
             }
         msg = self.assign_task(stgs,task_id)
         self.db_client.insert_one("tasks", args)
-        dingding("deploy",f"{args['Author']} submitted new task \n\nid: {args['task_id']}\n\n{msg}")
+        dingding("TASK",f"{args['Author']} submitted new task \n\nid: {args['task_id']}\n\n{msg}")
         self.finish(json.dumps(task_id))
 
     def assign_task(self, stgs, task_id):

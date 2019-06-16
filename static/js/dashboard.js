@@ -33,7 +33,13 @@ $(function(){
 function GoBackward(){
     window.history.back();
     }
-
+function check_submission(){
+    if(window.confirm("Are you sure?")){
+        return true;
+    }else{
+        return false;
+    }
+}
 function remove_row(obj){
 	var tr = obj.parentNode.parentNode;
     var tds = $(tr).find("td");
@@ -256,18 +262,6 @@ function removeSymbolRow(obj){
     nodeFather.removeChild(add_item); 
 }
 
-
-function error(XMLHttpRequest, textStatus, errorThrown){
-    // 通常情况下textStatus和errorThown只有其中一个有值 
-    $("#showResult").append("<div>请求出错啦！</div>");
-}
-function beforeSend(XMLHttpRequest){
-    $("#showResult").append("<div><img src='../static/loading.gif' />Processing..<div>");
-}
-function complete(XMLHttpRequest, textStatus){
-    $("#showResult").remove();
-}
-
 function old_operator(obj) {
     var s = obj.name.split("-");
     var name = s[1];
@@ -280,16 +274,15 @@ function old_operator(obj) {
         type: "POST",
         dataType:"json",
         data: {"name":name,"method":method},
-        beforeSend:task_processing(obj),
+        beforeSend:task_processing,
         complete:task_complete,
-        error:restore_button(obj),
+        error:null,
         success:function(response){
             if(response){
                 if (method=="halt"){
                     $(tds[1]).html("idle");
                     alert(name+" halted");};
             }else{
-                restore_button(obj);
                 alert(name+" "+method+" operation failed");
             }
         },
@@ -305,6 +298,12 @@ function operator(obj) {
     var index = select.selectedIndex;
     var server = select.options[index].text;
     if(server=="idle" & method!="archive"){return alert("please choose server");};
+    if(method=="halt"){
+        var r = check_submission();
+        if(r==false){
+            return;
+        }
+    }
 
     $.ajax({
         url:"/operator",
@@ -319,32 +318,34 @@ function operator(obj) {
                 if ("error" in response){
                     return alert(response["error"]);
                 }else{
-                if (method=="halt"){
-                    select.value = "idle";
-                    $(obj).attr("disabled","disabled");
-                    $(obj).css("pointer-events","none");
-                    var t = obj.name.split("-");
-                    var new_obj = document.getElementsByName("launch-"+t[1]+"-"+t[2]);
-                    $(new_obj).attr("disabled",false);
-                    $(new_obj).css("pointer-events","auto");
-                    $.post("/dy",{"change_status":name,"status":0});
-                    alert(name+" halted");
+                    var result = response["result"];
+                    if(result){
+                        if (method=="halt"){
+                            select.value = "idle";
+                            $(obj).attr("disabled","disabled");
+                            $(obj).css("pointer-events","none");
+                            var t = obj.name.split("-");
+                            var new_obj = document.getElementsByName("launch-"+t[1]+"-"+t[2]);
+                            $(new_obj).attr("disabled",false);
+                            $(new_obj).css("pointer-events","auto");
+                            alert(name+" halted");
 
-                }else if(method=="launch"){
-                    $(obj).attr("disabled","disabled");
-                    $(obj).css("pointer-events","none");
-                    var t = obj.name.split("-");
-                    var new_obj = document.getElementsByName("halt-"+t[1]+"-"+t[2]);
-                    $(new_obj).attr("disabled",false);
-                    $(new_obj).css("pointer-events","auto");
-                    $.post("/dy",{"change_status":name,"status":1});
-                    alert(name+"  launched");
-                }else if(method=="archive"){
-                    window.open("/static/Strategy/"+task_id+"/"+response["result"])
-                    };
+                        }else if(method=="launch"){
+                            $(obj).attr("disabled","disabled");
+                            $(obj).css("pointer-events","none");
+                            var t = obj.name.split("-");
+                            var new_obj = document.getElementsByName("halt-"+t[1]+"-"+t[2]);
+                            $(new_obj).attr("disabled",false);
+                            $(new_obj).css("pointer-events","auto");
+                            alert(name+"  launched");
+                        }else if(method=="archive"){
+                            window.open("/static/Strategy/"+task_id+"/"+response["result"])
+                            };
+                    }else{
+                        alert(name+" "+method+" operation failed");
+                    }
                 }
             }else{
-                restore_button(obj);
                 alert(name+" "+method+" operation failed");
             }
         },
@@ -363,70 +364,96 @@ function task_complete(){
     zhezhao.style.display="none"; 
     msg.style.display="none"; 
 }
-function restore_button(obj){
-    //$(obj).attr("disabled",false);
-    //$(obj).css("pointer-events","auto");
-    var zhezhao=document.getElementById("zhezhao"); 
-    var msg=document.getElementById("msg"); 
-    zhezhao.style.display="none"; 
-    msg.style.display="none"; 
-}
 
-function render(instrument,pnl){
+function error(XMLHttpRequest, textStatus, errorThrown){
+    // 通常情况下textStatus和errorThown只有其中一个有值 
+    $("#showResult").append("<div>请求出错啦！</div>");
+}
+function beforeSend(XMLHttpRequest){
+    $("#showResult").append("<div><img src='../static/loading.gif' />Processing..<div>");
+}
+function complete(XMLHttpRequest, textStatus){
+    $("#showResult").remove();
+}
+function render(instrument,pnl,qty){
     Highcharts.chart(instrument, {
-       chart: {
-             zoomType: 'x'
-       },
-       title: {
-             text: 'PnL Chart Over Time'
-       },
-       subtitle: {
-             text: document.ontouchstart === undefined ?
-                'Click and drag in the plot area to zoom in' : 'Pinch the chart to zoom in'
-       },
-       xAxis: {
-             type: 'datetime'
-       },
-       yAxis: {
-             title: {
-                text: 'PnL'
-             }
-       },
-       legend: {
-             enabled: false
-       },
-       plotOptions: {
-             area: {
-                fillColor: {
-                   linearGradient: {
-                         x1: 0,
-                         y1: 0,
-                         x2: 0,
-                         y2: 1
-                   },
-                   stops: [
-                         [0, Highcharts.getOptions().colors[0]],
-                         [1, Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0).get('rgba')]
-                   ]
-                },
-                marker: {
-                   radius: 2
-                },
-                lineWidth: 1,
-                states: {
-                   hover: {
-                         lineWidth: 1
-                   }
-                },
-                threshold: null
-             }
-       },
- 
-       series: [{
-             type: 'line',
-             name: 'pnl',
-             data: pnl
-       }]
+        chart: {
+                zoomType: 'x'
+        },
+        title: {
+                text: 'PnL Chart Over Time'
+        },
+        subtitle: {
+                text: document.ontouchstart === undefined ?
+                    'Click and drag in the plot area to zoom in' : 'Pinch the chart to zoom in'
+        },
+        xAxis: [{
+            type: 'datetime'
+        }],
+        yAxis: [{ // 主Y轴
+            labels: {
+                format: '{value}',
+                style: {
+                    color: '#89A54E',
+                    fontSize: '12px'
+                }
+            },
+            title: {
+                text: 'PNL',
+                style: {
+                    color: '#89A54E',
+                    fontSize: '12px'
+                }
+            }
+        }, { // 次Y轴
+            title: {
+                text: 'VOLUME',
+                style: {
+                    color: '#4572A7'
+                }
+            },
+            labels: {
+                format: '{value}',
+                style: {
+                    color: '#4572A7'
+                }
+            },
+            opposite: true
+        }],
+        tooltip: {
+            shared: true
+        },
+        legend: {
+            //enabled: false
+            legend: {
+                layout: 'vertical',
+                align: 'left',
+                x: 120,
+                verticalAlign: 'top',
+                y: 100,
+                floating: true,
+                backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'
+            },
+        },
+        series: [{
+            name: 'VOLUME',
+            color: '#4572A7',
+            type: 'column',
+            yAxis: 1,
+            data: qty,
+            tooltip: {
+                valueSuffix: ' '
+            }
+
+        }, {
+            name: 'PNL',
+            color: '#89A54E',
+            type: 'spline',
+            data: pnl,
+            tooltip: {
+                valueSuffix: ' '
+            }
+        }]
     })
  };
  
