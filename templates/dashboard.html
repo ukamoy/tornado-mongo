@@ -16,13 +16,13 @@
 {% end %}
 {% block body %} 
 <a href="/dashboard/strategy/new" class="btn btn-xs btn-primary">New Strategy</a>
-&nbsp;<a href="/dashboard/tasks/all" class="btn btn-xs btn-primary">Tasks</a>
+&nbsp;<a href="/dashboard/tasks/instance" class="btn btn-xs btn-primary">Instance</a>
+&nbsp;<a href="/dashboard/tasks/archiver" class="btn btn-xs btn-primary">Archiver</a>
 {%if show=="all"%}
 &nbsp;<a href="/dashboard?display=all" class="btn btn-xs btn-primary">Show All</a>
 {%elif show=="mine"%}
 &nbsp;<a href="/dashboard" class="btn btn-xs btn-primary">Show Mine</a>
 {%end%}
-<!--<form action="/dashboard/tasks/all" method="post" id="form">-->
 {%if data%}
     <div class="table-responsive" style="margin-top: 10px">
         <table cellpadding="0" cellspacing="0" border="0" class="table-1" id="strategy_list">
@@ -30,7 +30,6 @@
                 <tr>
                     <th><input type="checkbox" class="checkall" name="checkall"></th>
                     <th>Name</th>
-                    <th>Server</th>
                     <th>Position as at <div id="time" style="display:inline"></div></th>
                     <th>Profile</th>
                     <th>Update Time</th>
@@ -40,8 +39,7 @@
                 {% for d in data %}
                 <tr>
                     <td><input type="checkbox" value="{{d['name']}}" name="cc"></td>
-                    <td><a href="/dashboard/strategy/{{d['_id']}}">{{d["name"]}}</a></td>
-                    <td class="center">{{d["server"]}}</td>
+                    <td><a href="/dashboard/strategy/{{d['name']}}">{{d["name"]}}</a></td>
                     <td>
                         {%for sym in d['tradePos']%}
                         <div>
@@ -62,10 +60,9 @@
         </table>
     </div>
     <div class="row">
-        <a href="javascript:;" class="btn btn-xs btn-primary" onclick="submit_task(this)">Create Task</a>
+        <a href="javascript:;" class="btn btn-xs btn-primary" onclick="create_instance()">Create Instance</a>
     </div>
 {% else %}
     no data
 {% end %}
-<!--</form>-->
 {% end %}

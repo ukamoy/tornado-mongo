@@ -27,7 +27,7 @@ class dashboard(BaseHandler):
 class strategy(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
-        stgs = {} if args[0] =='new' else self.db_client.query_one("strategy",{"_id":ObjectId(args[0])}) 
+        stgs = {} if args[0] =='new' else self.db_client.query_one("strategy",{"name":args[0]}) 
         self.render("strategy.html", title = "Strategy", data = stgs)
 
     @tornado.gen.coroutine
@@ -81,35 +81,44 @@ class tasks(BaseHandler):
     @tornado.web.authenticated
     def get(self, *args, **kwargs):
         current_user = self.get_current_user()
-        if args[0]=="all":
-            qry = {"Author":current_user["name"]}
-            admin = False
-            if current_user["group"]=="zeus":
-                qry={}
-                admin=True
-            json_obj = self.db_client.query("tasks",qry,[('_id', -1)])
-            self.render("tasks.html", title = "Task List", data = json_obj,admin=admin)
-        else:
-            task = self.db_client.query_one("tasks",{"task_id":args[0]})
-            json_obj = self.db_client.query("strategy",{"name":{"$in":task["strategies"]}}) 
+        admin = True
+
+        if args[0]=="instance":
+            title = "INSTANCE"
+            qry = {"status":{"$in":[0,1]}}
             servers = self.db_client.query("server",{},[('_id', -1)])
             serv_name = list(map(lambda x: x["server_name"], servers))
-            self.render("task_info.html", title = f"TASK {args[0]}", data = json_obj, serv = serv_name, Author = task['Author'], task_id=args[0], status=task["status"])
+        elif args[0]=="archiver":
+            qry = {"status":-1}
+            title = "ARCHIVER"
+            serv_name = None
+        else:
+            return self.finish()
+
+        if current_user["group"]!="zeus":
+            qry.update({"Author" : current_user["name"]})
+            admin = False
+        
+        json_obj = self.db_client.query("tasks",qry,[('_id', -1)])
+        self.render("tasks.html", title = title, data = json_obj, serv = serv_name,admin=admin)
   
     def post(self, *args, **kwargs):
         current_user = self.get_current_user()
         task_id = datetime.now().strftime("%Y%m%d%H%M%S%f")[:-3]
         stgs = list(self.request.arguments.keys())
         
-        args = {
-            "task_id" : task_id,
-            "Author" : current_user["name"],
-            "status" : "submitted",
-            "strategies" : stgs
-            }
+        for strategy in stgs:
+            args = {
+                "task_id" : task_id,
+                "Author" : current_user["name"],
+                "status" : 0,
+                "server" : "idle",
+                "strategy" : strategy
+                }
+            self.db_client.insert_one("tasks", args)
+
         msg = self.assign_task(stgs,task_id)
-        self.db_client.insert_one("tasks", args)
-        dingding("TASK",f"{args['Author']} submitted new task \n\nid: {args['task_id']}\n\n{msg}")
+        dingding("TASK",f"{args['Author']} Create Task \n\nid: {args['task_id']}\n\n{msg}")
         self.finish(json.dumps(task_id))
 
     def assign_task(self, stgs, task_id):
@@ -201,7 +210,7 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
 
 handlers = [
     (r"/dashboard", dashboard), 
-    (r"/dashboard/strategy/([a-zA-Z0-9]+)", strategy), 
+    (r"/dashboard/strategy/([a-zA-Z0-9_]+)", strategy), 
     (r"/dashboard/tasks/([a-zA-Z0-9]+)", tasks), 
     (r"/pos", posHandler),
     (r"/orders", orders),

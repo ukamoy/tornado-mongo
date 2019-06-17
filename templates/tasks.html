@@ -2,35 +2,80 @@
 {% block head %}
 {% end %}
 {% block body %}
-<a href="/dashboard" class="btn btn-xs btn-primary">DASHBOARD</a>
-<div class="table-responsive" style="margin-top: 10px">
-    <table cellpadding="0" cellspacing="0" border="0" class="table-1" id="strategy_list">
-        <thead>
-            <tr>
-                <th>Task ID</th>
-                {%if admin%}
-                <th>Author</th>
-                {%end%}
-                <th>Status</th>
-                <th>Strategy</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for d in data %}
-            <tr>
-                <td><a href="/dashboard/tasks/{{d['task_id']}}">{{d["task_id"]}}</a></td></td>
-                {%if admin%}
-                <td>{{d["Author"]}}</td>
-                {%end%}
-                <td>{{d["status"]}}</td>
-                <td>
-                    {%for stg in d["strategies"]%}
-                    &nbsp;{{stg}};
-                    {%end%}
-                </td>
-            </tr>
-            {% end %}
-        </tbody>
-    </table>
+<div class = "row" style="margin-top: 10px">
+    &nbsp;<a href="/dashboard" class="btn btn-xs btn-primary">DASHBOARD</a>
+    &nbsp;<a href="/dashboard/tasks/instance" class="btn btn-xs btn-primary">Instance</a>
+    &nbsp;<a href="/dashboard/tasks/archiver" class="btn btn-xs btn-primary">Archiver</a>
 </div>
+
+{%if data%}
+    <div class="table-responsive" style="margin-top: 10px">
+        <table cellpadding="0" cellspacing="0" border="0" class="table-1">
+            <thead>
+                <tr>
+                    <th>Task ID</th>
+                    {%if admin%}
+                    <th>Author</th>
+                    {%end%}
+                    <th>Name</th>
+                    <th>Server</th>
+                    <th>Operator</th>
+                    {%if title=="INSTANCE"%}
+                    <th>Rectify</th>
+                    {%end%}
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in data %}
+                <tr>
+                    <td>{{d["task_id"]}}</td>
+                    {%if admin%}
+                    <td>{{d["Author"]}}</td>
+                    {%end%}
+                    <td>{{d["strategy"]}}</td>
+                    <td class="center">
+                        {%if serv%}
+                        <select id="server-{{d['strategy']}}" class="form-control">
+                            <option value = "idle" selected="selected">idle</option>
+                            {% for item in serv%}
+                                {% if d["server"] == item %}
+                                    <option value = "{{item}}" selected="selected">{{item}}</option>
+                                {%else%}
+                                    <option value = "{{item}}">{{item}}</option>
+                                {%end%}
+                            {%end%}
+                        </select>
+                        {%else%}
+                        {{ d["server"] }}
+                        {%end%}
+                    </td>
+                    <td>
+                        {%if d["status"]>0%}
+                        <a class="btn btn-xs btn-success" href="javascript:;" onclick="operator(this)" name="launch-{{d['strategy']}}-{{d['task_id']}}" disabled="disabled" style="pointer-events:none">Launch</a>
+                        &nbsp;<a class="btn btn-xs btn-danger" href="javascript:;" onclick="operator(this)" name="halt-{{d['strategy']}}-{{d['task_id']}}">Halt</a>&nbsp;
+                        {%elif d["status"]==0%}
+                        <a class="btn btn-xs btn-success" href="javascript:;" onclick="operator(this)" name="launch-{{d['strategy']}}-{{d['task_id']}}">Launch</a>
+                        &nbsp;<a class="btn btn-xs btn-danger" href="javascript:;" onclick="operator(this)" name="halt-{{d['strategy']}}-{{d['task_id']}}" disabled="disabled" style="pointer-events:none">Halt</a>&nbsp;
+                        {%end%}
+                        <a class="btn btn-xs btn-info" href="javascript:;" onclick="operator(this)" name="archive-{{d['strategy']}}-{{d['task_id']}}">Archive</a>
+                    </td>
+                    {%if title == "INSTANCE" %}
+                    <td>
+                        <a class="btn btn-xs btn-danger" href = "javascript:;" onclick="operator(this)" name="delete-{{d['strategy']}}-{{d['task_id']}}">Delete</a>
+                    </td>
+                    {%end%}
+                </tr>
+                {% end %}
+            </tbody>
+        </table>
+        {%if title == "INSTANCE" %}
+        <a class="btn btn-xs btn-warning" href="javascript:;" onclick="launch_all(this)">Launch All</a>
+        <a class="btn btn-xs btn-danger" href="javascript:;" onclick="halt_all(this)">Halt All</a>
+        {%end%}
+
+    </div>
+{% else %}
+no data
+{% end %}
+
 {% end %}

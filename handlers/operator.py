@@ -20,8 +20,12 @@ class operator(BaseHandler):
         path = f"{working_path}/{task_id}" # 策略文件夹路径
         server_name = self.get_argument('server',None)
 
-        if server_name =="idle" and method == "archive":
-            return self.finish(json.dumps({"result":f"{stg_name}-latest.tar"}))
+        if server_name =="idle":
+            if method == "archive":
+                return self.finish(json.dumps({"result":f"{stg_name}-latest.tar"}))
+            elif method=="delete":
+                self.db_client.update_one("tasks",{"strategy":stg_name,"task_id":task_id},{"status":-1})
+                return self.finish(json.dumps({"result":True}))
 
         server = get_server(server_name)
         res=False
@@ -35,10 +39,10 @@ class operator(BaseHandler):
                         if container.status == "running":
                             status = server.stop(stg_name)
                             if status=="exited":
-                                self.db_client.update_one("strategy",{"name":stg_name},{"server":"idle","status":0})
+                                self.db_client.update_one("tasks",{"strategy":stg_name,"task_id":task_id},{"status":0})
                                 self.db_client.insert_one("operation",{"name":stg_name,"op":0,"timestamp":now})
                                 r=self.archive(server, stg_name, path)
-                                server.remove(stg_name)
+                                
                                 res=True
                             else:
                                 return self.finish(json.dumps({"error":"operation halt failed"}))
@@ -46,6 +50,18 @@ class operator(BaseHandler):
                             return self.finish(json.dumps({"error":"container not running"}))
                     else:
                         return self.finish(json.dumps({"error":"container not exists"}))
+                elif method == "delete":
+                    if container:
+                        if container.status=="running":
+                            return self.finish(json.dumps({"error":"you should halt container in advance"}))
+                        else:
+                            r = server.remove(stg_name)
+                            if not r:
+                                res = True
+                                self.db_client.update_one("tasks",{"strategy":stg_name,"task_id":task_id},{"status":-1})
+                    else:
+                        return self.finish(json.dumps({"error":"container not exists"}))
+                        
                 elif method == "launch":
                     if not container:
                         r = server.create(
@@ -58,15 +74,16 @@ class operator(BaseHandler):
                     status = server.start(stg_name)
                     if status == "running":
                         res=True
-                        self.db_client.update_one("strategy",{"name":stg_name},{"server":server_name,"status":1})
+                        self.db_client.update_one("tasks",{"strategy":stg_name,"task_id":task_id},{"server":server_name,"status":1})
                         self.db_client.insert_one("operation",{"name":stg_name,"op":1,"timestamp":now})
 
                 elif method == "archive":
-                    print(111)
                     res = self.archive(server, stg_name, path)
             else:
                 return self.finish(json.dumps({"error":"params not exists"}))
         else:
+            if method == "archive":
+                return self.finish(json.dumps({"result":f"{stg_name}-latest.tar"}))
             return self.finish(json.dumps({"error":"server not exists"}))
 
         self.finish(json.dumps({"result":res}))

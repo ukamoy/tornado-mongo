@@ -60,7 +60,7 @@ function trasfer_data(obj){
 	$.get("/deploy/assignment", {"stgs":$(tds[4]).html()});
 }
 
-function submit_task(obj){
+function create_instance(){
     var result = gether_checkbox();
     if(result.length==0){
         alert("please pick strategy");
@@ -75,9 +75,9 @@ function submit_task(obj){
             complete:task_complete,
             success:function(response){
                 if(response){
-                    window.location.href="/dashboard/tasks/"+response;
+                    window.location.href="/dashboard/tasks/instance";
                 }else{
-                    alert("create task failed");
+                    alert("create instance failed");
                 }
             },
         });
@@ -288,6 +288,14 @@ function old_operator(obj) {
         },
     });
 }
+
+function launch_all(obj){
+    var r = check_submission();
+        if(r==false){
+            return;
+        }
+    alert("xiang de mei");
+}
 function operator(obj) {
     var s = obj.name.split("-");
     var method = s[0];
@@ -297,8 +305,8 @@ function operator(obj) {
     var select = document.getElementById("server-"+name);
     var index = select.selectedIndex;
     var server = select.options[index].text;
-    if(server=="idle" & method!="archive"){return alert("please choose server");};
-    if(method=="halt"){
+    if(server=="idle" & method!="delete"){return alert("please choose server");};
+    if(method in ["halt","delete"]){
         var r = check_submission();
         if(r==false){
             return;
@@ -321,7 +329,6 @@ function operator(obj) {
                     var result = response["result"];
                     if(result){
                         if (method=="halt"){
-                            select.value = "idle";
                             $(obj).attr("disabled","disabled");
                             $(obj).css("pointer-events","none");
                             var t = obj.name.split("-");
@@ -340,7 +347,12 @@ function operator(obj) {
                             alert(name+"  launched");
                         }else if(method=="archive"){
                             window.open("/static/Strategy/"+task_id+"/"+response["result"])
-                            };
+                        }else if(method=="delete"){
+                            var tr = obj.parentNode.parentNode;
+                            tr.parentNode.removeChild(tr);
+                            alert("Moved to Archiver");
+                        };
+
                     }else{
                         alert(name+" "+method+" operation failed");
                     }
@@ -394,14 +406,14 @@ function render(instrument,pnl,qty){
             labels: {
                 format: '{value}',
                 style: {
-                    color: '#89A54E',
+                    color: '#00BFFF',
                     fontSize: '12px'
                 }
             },
             title: {
                 text: 'PNL',
                 style: {
-                    color: '#89A54E',
+                    color: '#00BFFF',
                     fontSize: '12px'
                 }
             }
@@ -409,13 +421,13 @@ function render(instrument,pnl,qty){
             title: {
                 text: 'VOLUME',
                 style: {
-                    color: '#4572A7'
+                    color: '#C9C9C9'
                 }
             },
             labels: {
                 format: '{value}',
                 style: {
-                    color: '#4572A7'
+                    color: '#C9C9C9'
                 }
             },
             opposite: true
@@ -437,7 +449,7 @@ function render(instrument,pnl,qty){
         },
         series: [{
             name: 'VOLUME',
-            color: '#4572A7',
+            color: '#C9C9C9',
             type: 'column',
             yAxis: 1,
             data: qty,
@@ -447,7 +459,7 @@ function render(instrument,pnl,qty){
 
         }, {
             name: 'PNL',
-            color: '#89A54E',
+            color: '#00BFFF',
             type: 'spline',
             data: pnl,
             tooltip: {
