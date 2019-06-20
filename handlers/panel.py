@@ -5,58 +5,34 @@ import os,json,traceback,re
 from bson import ObjectId
 from dayu.write_settings import update_repo, prepare_stg_files, cp_files
 
-class deploy(BaseHandler):
-    @tornado.web.authenticated
-    def get(self,*args, **kwargs):
-        # current_user = self.get_current_user()
-        # if not current_user["group"] == "zeus":
-        #     return self.redirect("/dashboard")
-        if args[0] == "all":
-            qry = {}
-        elif args[0] == "todo":
-            qry = {"status":{"$in":["submitted","processing","assigned"]}}
-
-        json_obj = self.db_client.query("tasks",qry,[('_id', -1)])
-        self.render("deploy.html", title = "DEPLOYMENT", data = json_obj)
-    
-    def post(self,*args, **kwargs):
-        method = self.get_argument('method')
-        _id = self.get_argument('id')
-        
-        self.db_client.update_one("tasks",{"_id":ObjectId(_id)},{"status":method})
-        task = self.db_client.query_one("tasks",{"_id":ObjectId(_id)})
-        dingding("deploy", f"{task['Author']}'s task {method}\n\n id:{task['task_id']} ")
-
 class assignment(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
         current_user = self.get_current_user()
         if not current_user["group"] == "zeus":
             return self.redirect("/dashboard")
-        task = self.db_client.query_one("tasks",{"task_id":args[0]})
-        stgs = task["strategies"]
-        json_obj = self.db_client.query("strategy",{"name":{"$in":stgs}}) 
+        task = self.db_client.query("tasks",{"task_id":args[0]})
+        stg_list = list(map(lambda x: x["strategy"],task))
+        json_obj = self.db_client.query("strategy",{"name":{"$in":stg_list}}) 
         servers = self.db_client.query("server",{},[('_id', -1)])
         serv_name = list(map(lambda x: x["server_name"], servers))
-        self.render("assign.html", title = "ASSIGN SERVER", data = json_obj, serv = serv_name, Author = task['Author'], task_id=args[0], status=task["status"])
+        self.render("assign.html", title = "ASSIGN SERVER (Remote File Dispatcher)", data = json_obj, serv = serv_name, task_id=args[0])
     
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):
         # update db for assigned strategy
-        server_name = self.get_arguments('server_name')
-        _ids = self.get_arguments('_id')
-        for serv, _id in zip(server_name, _ids):
-            self.db_client.update_one("strategy",{"_id":ObjectId(_id)},{"server":serv})
+        server_names = self.get_arguments('server_names')
+        stg_names = self.get_arguments('stg_names')
+        for serv, stg_name in zip(server_names, stg_names):
+            self.db_client.update_one("strategy",{"name":stg_name},{"server":serv})
         
         # prepare strategy
-        Author = self.get_argument('Author')
         task_id = self.get_argument('task_id')
-        servers = self.db_client.query("server",{"server_name":{"$in":server_name}})
+        servers = self.db_client.query("server",{"server_name":{"$in":server_names}})
         for server in servers:
             c = server_conn(server["server_ip"])
             msg = cp_files(c, server["server_name"], task_id)
-        self.db_client.update_one("tasks",{"task_id":task_id,"Author":Author},{"status":"assigned"})
-        print("deploy", f"{Author}'s task {task_id} assigned \n\n {msg}")
+        print("deploy", f"task {task_id} assigned by file transfer\n\n {msg}")
         self.redirect(f"/deploy/assignment/{task_id}")
 
 class server(BaseHandler):
@@ -93,6 +69,24 @@ class server(BaseHandler):
         dingding("deploy",msg)
         self.redirect("/deploy/server")
 
+class account(BaseHandler):
+    @tornado.web.authenticated
+    def get(self,*args,**kwargs):
+        accounts = self.db_client.query("account_value",{})
+        ac_list = list(set(map(lambda x: x["account"], accounts)))
+        self.render("account.html", title = f"Account Chart", ac_list=ac_list)
+    def post(self,*args,**kwargs):
+        ac = self.get_argument("query")
+        ac_hist = self.db_client.query("account_value",{"account":ac})
+        b=list(map(lambda x:[x["date"],x["FUTURE"]],ac_hist))
+        c=list(map(lambda x:x[1],b))
+        d=list(dict(c).keys())+list(dict(c).values())
+        coin_dict={}
+        for k in d:
+            coin_dict[k] = list(map(lambda x: x[1][k],b))
+        coin_dict.update({"date":list(map(lambda x: x[1],b))})
+        self.finish(json.dumps(coin_dict))
+
 class ding_info(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
@@ -119,8 +113,8 @@ class ding_info(BaseHandler):
 
 
 handlers = [
-    (r"/deploy/list/(all|todo|work)", deploy),
     (r"/deploy/assignment/([0-9]+)", assignment),
-    (r"/deploy/server", server),
-    (r"/ding", ding_info), 
+    (r"/panel/server", server),
+    (r"/panel/account", account), 
+    (r"/panel/ding", ding_info)
 ]

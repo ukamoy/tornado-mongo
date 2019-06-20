@@ -1,11 +1,13 @@
 import tornado.web
 from handlers import BaseHandler
+from handlers.query import generateSignature, query_price,okex_sign
 from dayu.util import server_conn, get_server, filter_name, dingding
-from dayu.write_settings import update_repo, prepare_stg_files
 from config import working_path
 import re
 import os
 import json
+import requests
+from urllib.parse import urlencode
 from time import sleep
 from datetime import datetime
 IMAGE = "daocloud.io/xingetouzi/vnpy-fxdayu:v1.1.20"
@@ -40,6 +42,7 @@ class operator(BaseHandler):
                             status = server.stop(stg_name)
                             if status=="exited":
                                 self.db_client.update_one("tasks",{"strategy":stg_name,"task_id":task_id},{"status":0})
+                                self.db_client.update_one("strategy",{"name":stg_name},{"server":"idle"})
                                 self.db_client.insert_one("operation",{"name":stg_name,"op":0,"timestamp":now})
                                 r=self.archive(server, stg_name, path)
                                 
@@ -75,6 +78,7 @@ class operator(BaseHandler):
                     if status == "running":
                         res=True
                         self.db_client.update_one("tasks",{"strategy":stg_name,"task_id":task_id},{"server":server_name,"status":1})
+                        self.db_client.update_one("strategy",{"name":stg_name},{"server":server_name})
                         self.db_client.insert_one("operation",{"name":stg_name,"op":1,"timestamp":now})
 
                 elif method == "archive":
@@ -180,6 +184,15 @@ class mainipulator(BaseHandler):
             r = self.db_client.query_one("ding",{"name":qry})
             msg = True if r else False
             self.finish(json.dumps(msg))
+        elif self.get_argument("checkPos", None):
+            json_obj = self.db_client.query_one("strategy",{"name":self.get_argument("checkPos")})
+            pos_dict = {}
+            for sym, pos in json_obj["tradePos"].items():
+                if pos[0]:
+                    pos_dict.update({f"{sym}_LONG":pos[0]})
+                if pos[1]:
+                    pos_dict.update({f"{sym}_SHORT":pos[1]})
+            self.finish(pos_dict)
         elif self.get_argument("task_id", None):
             t = self.get_argument("task_id")
             n = self.get_argument("stg_name")
@@ -195,14 +208,116 @@ class mainipulator(BaseHandler):
             for ex in json_obj:
                 ac_dict.update({ex["name"]:[ex["keys"],ex["symbols"]]})
             self.finish(ac_dict)
-
+class clear_pos(BaseHandler):
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):
         print("mainipulator post",args, self.request.arguments, "body:", self.request.body_arguments)
-        if self.get_argument("change_status",None):
-            n = self.get_argument("change_status")
-            s = self.get_argument("status")
-            self.db_client.update_one("strategy",{"name":n},{"status":int(s)})
+        d=self.get_argument("symbol").split("_")
+        qty=self.get_argument("qty")
+        stg=filter_name(self.get_argument("strategy"))
+        sym,ac,direction = d
+        instrument = self.arb_symbol(sym.split(":")[0])
+
+        account_info = self.db_client.query_one("account",{"name":ac})
+        open_orders = self.query_open_orders(account_info,instrument)  
+        r=open_orders.result()
+        if r.get("result",False):
+            orders = r["order_info"]
+            need_to_cancel = list(map(lambda x:x["client_oid"] if x["client_oid"].split("FUTU")[0]==stg else None, r["order_info"]))
+        len_cancel_order = len(need_to_cancel)
+        oids = self.cancel_order(account_info, instrument, (list(set(need_to_cancel))))
+        if len(oids.result())>0:
+            dingding("INSTANCE CONTROL",f"FOR {stg}, error in cancelling orders")
+        else:
+            r = self.close_position(account_info, stg, instrument, direction, qty)
+            print(r)
+            if r.get("result",False):
+                dingding("INSTANCE CONTROL",f"FOR {stg}, admin cancelled {len_cancel_order} open orders and closed postion")
+            else:
+                dingding("INSTANCE CONTROL",f"FOR {stg}, error in close position:{r}")
+
+    def arb_symbol(self, symbol):
+        res=requests.get("https://www.okex.com/api/futures/v3/instruments")
+        contract_map={}
+        for r in res.json():
+            vert=f"{r['underlying_index']}-{r['alias'].replace('_','-')}"
+            contract_map[str.upper(vert)]=r["instrument_id"]
+        return contract_map.get(symbol,symbol)
+
+    def close_position(self, account_info, strategy, instrument, direction, qty):
+        data={
+            "client_oid": f"{strategy}FUTUDSB{datetime.now().strftime('%y%m%d%H%M')}",
+            "instrument_id":instrument,
+            "size":str(int(qty)),
+            "match_price":"0",
+            "order_type":"0",
+            "leverage":str(account_info["future_leverage"])
+        }
+        if direction=="LONG":
+            data.update({"type":"3", "price":f"{query_price(instrument)/1.02:0.3f}"})
+        else:
+            data.update({"type":"4", "price":f"{query_price(instrument)*1.02:0.3f}"})
+        path = f'/api/futures/v3/order'
+        path = f"{path}?{urlencode(data)}"
+        
+        timestamp = f"{datetime.utcnow().isoformat()[:-3]}Z"
+        data=json.dumps(data)
+        msg = f"{timestamp}POST{path}{data}"
+        signature = generateSignature(msg, account_info["secretkey"])
+        headers = {
+            'Content-Type': 'application/json',
+            'OK-ACCESS-KEY': account_info["apikey"],
+            'OK-ACCESS-SIGN': signature,
+            'OK-ACCESS-TIMESTAMP': timestamp,
+            'OK-ACCESS-PASSPHRASE': account_info["passphrase"]
+        }
+        #headers = okex_sign(account_info,"POST",path,data)
+        print(headers,path)
+        url = f"https://www.okex.com{path}"
+        r = requests.post(url, headers = headers, data=data, timeout =10)
+        return r.json()
+    @tornado.gen.coroutine
+    def cancel_order(self, account_info, symbol, oids):
+        for oid in list(oids):
+            if oid:
+                timestamp = f"{datetime.utcnow().isoformat()[:-3]}Z"
+                path = f'/api/futures/v3/cancel_order/{symbol}/{oid}'
+                msg = f"{timestamp}POST{path}"
+                signature = generateSignature(msg, account_info["secretkey"])
+                headers = {
+                    'Content-Type': 'application/json',
+                    'OK-ACCESS-KEY': account_info["apikey"],
+                    'OK-ACCESS-SIGN': signature,
+                    'OK-ACCESS-TIMESTAMP': timestamp,
+                    'OK-ACCESS-PASSPHRASE': account_info["passphrase"]
+                }
+                url = f"https://www.okex.com{path}"
+                r = requests.post(url, headers = headers, timeout =10).json()
+                if r.get("result",False):
+                    oids.remove(oid)
+            else:
+                oids.remove(oid)
+        return oids
+    @tornado.gen.coroutine
+    def query_open_orders(self, account_info, symbol):
+        timestamp = f"{datetime.utcnow().isoformat()[:-3]}Z"
+        path = f'/api/futures/v3/orders/{symbol}'
+        params={"state":"6","instrument_id":symbol,"limit":100}
+        path = f"{path}?{urlencode(params)}"
+
+        msg = f"{timestamp}GET{path}"
+        signature = generateSignature(msg, account_info["secretkey"])
+        headers = {
+            'Content-Type': 'application/json',
+            'OK-ACCESS-KEY': account_info["apikey"],
+            'OK-ACCESS-SIGN': signature,
+            'OK-ACCESS-TIMESTAMP': timestamp,
+            'OK-ACCESS-PASSPHRASE': account_info["passphrase"]
+        }
+        url = f"https://www.okex.com{path}"
+        r = requests.get(url, headers = headers, timeout =10)
+        
+        return r.json()
 
 class public(BaseHandler):
     @tornado.gen.coroutine
@@ -225,6 +340,7 @@ class public(BaseHandler):
 
 handlers = [
     (r"/operator", operator),
+    (r"/operator/clear_pos", clear_pos), 
     (r"/dy", mainipulator), 
     (r"/q", public),
     (r"/old_operator", old_operator)

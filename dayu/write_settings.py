@@ -58,7 +58,7 @@ def cp_files(c, server_name, task_id):
     return f" - 策略 {update_list} 成功推送到了服务器 {server_name} \n\n"
     
     
-def prepare_stg_files(data,task_id,key_chain):
+def prepare_stg_files(data, task_id, key_chain):
     task_path = f"{working_path}/{task_id}"
     if os.path.exists(task_path):
         shutil.rmtree(task_path)

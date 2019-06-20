@@ -17,7 +17,7 @@
                     {%if admin%}
                     <th>Author</th>
                     {%end%}
-                    <th>Name</th>
+                    <th>Strategy</th>
                     <th>Server</th>
                     <th>Operator</th>
                     {%if title=="INSTANCE"%}
@@ -28,7 +28,7 @@
             <tbody>
                 {% for d in data %}
                 <tr>
-                    <td>{{d["task_id"]}}</td>
+                    <td><a href="/deploy/assignment/{{d['task_id']}}">{{d["task_id"]}}</a></td>
                     {%if admin%}
                     <td>{{d["Author"]}}</td>
                     {%end%}
@@ -57,11 +57,18 @@
                         <a class="btn btn-xs btn-success" href="javascript:;" onclick="operator(this)" name="launch-{{d['strategy']}}-{{d['task_id']}}">Launch</a>
                         &nbsp;<a class="btn btn-xs btn-danger" href="javascript:;" onclick="operator(this)" name="halt-{{d['strategy']}}-{{d['task_id']}}" disabled="disabled" style="pointer-events:none">Halt</a>&nbsp;
                         {%end%}
+                        {%if title == "INSTANCE" %}
                         <a class="btn btn-xs btn-info" href="javascript:;" onclick="operator(this)" name="archive-{{d['strategy']}}-{{d['task_id']}}">Archive</a>
+                        {%else%}
+                        <a class="btn btn-xs btn-info" href="/static/Strategy/{{d['task_id']}}/{{d['strategy']}}-latest.tar">Archive</a>
+                        {%end%}
+                        &nbsp;<a class="btn btn-xs btn-primary" href="http://149.28.78.5:5601/app/kibana#/discover?_g=()&_a=(columns:!(_source),filters:!(('$state':(store:appState),meta:(alias:!n,disabled:!f,index:'0c5c9850-7e27-11e9-95ef-03925e1df000',key:message,negate:!f,params:!({{d['strategy']}}),type:phrases,value:{{d['strategy']}}),query:(bool:(minimum_should_match:1,should:!((match_phrase:(message:{{d['strategy']}}))))))),index:'0c5c9850-7e27-11e9-95ef-03925e1df000',interval:auto,query:(language:lucene,query:''),sort:!('@timestamp',desc))" target="_blank">Log</a>
+
                     </td>
                     {%if title == "INSTANCE" %}
                     <td>
-                        <a class="btn btn-xs btn-danger" href = "javascript:;" onclick="operator(this)" name="delete-{{d['strategy']}}-{{d['task_id']}}">Delete</a>
+                        <a class="btn btn-xs btn-warning" href="javascript:;" onclick="clear_pos(this)" name="{{d['strategy']}}">Clear Pos</a>
+                        <a class="btn btn-xs btn-danger" href="javascript:;" onclick="operator(this)" name="delete-{{d['strategy']}}-{{d['task_id']}}">Delete</a>
                     </td>
                     {%end%}
                 </tr>
@@ -69,8 +76,8 @@
             </tbody>
         </table>
         {%if title == "INSTANCE" %}
-        <a class="btn btn-xs btn-warning" href="javascript:;" onclick="launch_all(this)">Launch All</a>
-        <a class="btn btn-xs btn-danger" href="javascript:;" onclick="halt_all(this)">Halt All</a>
+        <a class="btn btn-xs btn-warning" href="javascript:;" onclick="operate_all(this)" name="launch_all">Launch All</a>
+        <a class="btn btn-xs btn-danger" href="javascript:;" onclick="operate_all(this)" name="halt_all">Halt All</a>
         {%end%}
 
     </div>

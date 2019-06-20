@@ -22,58 +22,60 @@ class dashboard(BaseHandler):
                 show="mine"
 
         json_obj = self.db_client.query("strategy",qry,[('_id', -1)])
-        self.render("dashboard.html", title = "DASHBOARD", data=json_obj,show=show)
+        self.render("dashboard.html", user=current_user, title = "DASHBOARD", data=json_obj,show=show)
 
 class strategy(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
-        stgs = {} if args[0] =='new' else self.db_client.query_one("strategy",{"name":args[0]}) 
-        self.render("strategy.html", title = "Strategy", data = stgs)
+        strategy = {} if args[0] =='new' else self.db_client.query_one("strategy",{"name":args[0]}) 
+        s=0
+        if strategy:
+            for pos in strategy["tradePos"].values():
+                s+=(pos[0]+pos[1])
+        self.render("strategy.html", title = "Strategy", data = strategy, pos=s)
 
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):
         current_user = self.get_current_user()
         post_values = ['trade_symbols','trade_symbols_ex','trade_symbols_ac',
         'assist_symbols','assist_symbols_ex','assist_symbols_ac']
-        stgs = {}
+        strategy = {}
         for v in post_values:
-            stgs[v] = self.get_body_arguments(v, None)
+            strategy[v] = self.get_body_arguments(v, None)
         
         sym_list=[]
-        stgs["tradeSymbolList"] =[]
-        stgs["tradePos"] = {}
+        strategy["tradeSymbolList"] =[]
+        strategy["tradePos"] = {}
 
-        for sym,ex,ac in zip(stgs["assist_symbols"],stgs["assist_symbols_ex"],stgs["assist_symbols_ac"]):
+        for sym,ex,ac in zip(strategy["assist_symbols"],strategy["assist_symbols_ex"],strategy["assist_symbols_ac"]):
             sym_list.append(f"{sym}:{ex}_{ac}")
-        for sym,ex,ac in zip(stgs["trade_symbols"],stgs["trade_symbols_ex"],stgs["trade_symbols_ac"]):
+        for sym,ex,ac in zip(strategy["trade_symbols"],strategy["trade_symbols_ex"],strategy["trade_symbols_ac"]):
             symbol = f"{sym}:{ex}_{ac}"
-            stgs["tradeSymbolList"].append(symbol)
-            stgs["tradePos"].update({symbol:[0,0]})
-
+            strategy["tradeSymbolList"].append(symbol)
+            strategy["tradePos"].update({symbol:[0,0]})
 
         for symbol in list(sym_list):
-            if symbol in stgs["tradeSymbolList"]:
+            if symbol in strategy["tradeSymbolList"]:
                 sym_list.remove(symbol)
-        stgs["symbolList"] = stgs["tradeSymbolList"] + sym_list
+        strategy["symbolList"] = strategy["tradeSymbolList"] + sym_list
         
         stg_set = self.get_argument('strategy_setting', {})
-        stgs["strategy_setting"] = eval(stg_set)
-        stgs["git_path"] = self.get_argument('git_path', None)
-        stgs["name"] = self.get_argument('name', None)
-        stgs["strategy_class_name"] = self.get_argument('strategy_class_name', None)
-        stgs["alias"] = filter_name(stgs["name"])
+        strategy["strategy_setting"] = eval(stg_set)
+        strategy["git_path"] = self.get_argument('git_path', None)
+        strategy["name"] = self.get_argument('name', None)
+        strategy["strategy_class_name"] = self.get_argument('strategy_class_name', None)
+        strategy["alias"] = filter_name(strategy["name"])
 
         if self.get_argument("_id", None):
             flt={"_id":ObjectId(self.get_argument("_id"))}
-            stgs["updatetime"] = datetime.now().strftime("%Y%m%d %H:%M")
-            self.db_client.update_one("strategy", flt, stgs)
+            strategy["updatetime"] = datetime.now().strftime("%Y%m%d %H:%M")
+            self.db_client.update_one("strategy", flt, strategy)
         else:
-            stgs["server"] = "idle"
-            stgs["Author"] = current_user["name"]
-            stgs["createtime"] = datetime.now().strftime("%Y%m%d %H:%M")
-            stgs["updatetime"] = stgs["createtime"]
-            self.db_client.insert_one("strategy", stgs)
-            self.db_client.insert_one("pos",{"name":stgs["alias"],"long":0,"short":0})
+            strategy["server"] = "idle"
+            strategy["Author"] = current_user["name"]
+            strategy["createtime"] = datetime.now().strftime("%Y%m%d %H:%M")
+            strategy["updatetime"] = strategy["createtime"]
+            self.db_client.insert_one("strategy", strategy)
         self.redirect("/dashboard")
     
 
@@ -105,9 +107,8 @@ class tasks(BaseHandler):
     def post(self, *args, **kwargs):
         current_user = self.get_current_user()
         task_id = datetime.now().strftime("%Y%m%d%H%M%S%f")[:-3]
-        stgs = list(self.request.arguments.keys())
-        
-        for strategy in stgs:
+        stg_list = list(self.request.arguments.keys())
+        for strategy in stg_list:
             args = {
                 "task_id" : task_id,
                 "Author" : current_user["name"],
@@ -117,13 +118,13 @@ class tasks(BaseHandler):
                 }
             self.db_client.insert_one("tasks", args)
 
-        msg = self.assign_task(stgs,task_id)
+        msg = self.assign_task(stg_list,task_id)
         dingding("TASK",f"{args['Author']} Create Task \n\nid: {args['task_id']}\n\n{msg}")
         self.finish(json.dumps(task_id))
 
-    def assign_task(self, stgs, task_id):
+    def assign_task(self, stg_list, task_id):
         # get strategies
-        json_obj = self.db_client.query("strategy",{"name":{"$in":stgs}})
+        json_obj = self.db_client.query("strategy",{"name":{"$in":stg_list}})
         
         # gether required keys
         key_chain = {}
@@ -147,12 +148,12 @@ class tasks(BaseHandler):
 class chart(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
-        strategy = args[0]
-        self.render("chart.html", title = f"{strategy} Chart")
+        self.render("chart.html", title = f"{args[0]} Chart")
     def post(self,*args,**kwargs):
         strategy = args[0]
         json_obj = self.db_client.query("orders",{"strategy":strategy})
-        stat = get_chart(strategy, json_obj)
+        hist = self.db_client.query("operation",{"name":strategy})
+        stat = get_chart(strategy, json_obj, hist)
         self.finish(json.dumps(stat))
 
 class orders(BaseHandler):

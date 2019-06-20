@@ -30,6 +30,7 @@
                 <tr>
                     <th><input type="checkbox" class="checkall" name="checkall"></th>
                     <th>Name</th>
+                    <th>Server</th>
                     <th>Position as at <div id="time" style="display:inline"></div></th>
                     <th>Profile</th>
                     <th>Update Time</th>
@@ -40,6 +41,7 @@
                 <tr>
                     <td><input type="checkbox" value="{{d['name']}}" name="cc"></td>
                     <td><a href="/dashboard/strategy/{{d['name']}}">{{d["name"]}}</a></td>
+                    <td>{{d["server"]}}</td>
                     <td>
                         {%for sym in d['tradePos']%}
                         <div>

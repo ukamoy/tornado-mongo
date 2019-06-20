@@ -83,14 +83,6 @@ function create_instance(){
         });
     };
 }
-function withdraw(obj){
-    var tr = obj.parentNode.parentNode;
-    var tds = $(tr).find("td");
-    document.getElementById(obj.name).innerHTML="withdrawn";
-    document.getElementById("link"+obj.name).innerHTML="N/A";
-    $.get("/dashboard/task_sheet/"+obj.name);
-}
-
 	
 function gether_table(){
 	var tr = $("#table tr");
@@ -289,7 +281,7 @@ function old_operator(obj) {
     });
 }
 
-function launch_all(obj){
+function operate_all(obj){
     var r = check_submission();
         if(r==false){
             return;
@@ -306,7 +298,7 @@ function operator(obj) {
     var index = select.selectedIndex;
     var server = select.options[index].text;
     if(server=="idle" & method!="delete"){return alert("please choose server");};
-    if(method in ["halt","delete"]){
+    if(method =="halt" | method=="delete"){
         var r = check_submission();
         if(r==false){
             return;
@@ -387,7 +379,197 @@ function beforeSend(XMLHttpRequest){
 function complete(XMLHttpRequest, textStatus){
     $("#showResult").remove();
 }
-function render(instrument,pnl,qty){
+function clear_pos(obj){
+    var r = check_submission();
+        if(r==false){
+            return;
+        }
+    var name = obj.name;
+    $.ajax({
+        url:"/dy",
+        type: "GET",
+        dataType:"json",
+        data: {"checkPos":name},
+        beforeSend:task_processing,
+        complete:task_complete,
+        error:null,
+        success:function(response){
+            if(JSON.stringify(response)=="{}"){
+                return alert("no position to clear!");
+            }else{
+                for(var sym in response){
+                    $.post("/operator/clear_pos",{"symbol":sym,"qty":response[sym],"strategy":name})
+                }
+            }
+        }
+    });
+}
+
+function account_value(hist){
+    var dom = document.getElementById("account_value");
+    var myChart = echarts.init(dom);
+    var series=[]
+    for(var coin in hist){
+        var kk ={name:coin,
+                type:'line',
+                smooth:true,
+                symbol: 'none',
+                sampling: 'average',
+                itemStyle: {
+                    color: 'rgb(255, 70, 131)'
+                },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{
+                        offset: 0,
+                        color: 'rgb(255, 158, 68)'
+                    }, {
+                        offset: 1,
+                        color: 'rgb(255, 70, 131)'
+                    }])
+                },
+                data: hist[coin]
+                }
+        series.push(kk);
+    }
+
+    option = {
+        tooltip: {
+            trigger: 'axis',
+            position: function (pt) {
+                return [pt[0], '10%'];
+            }
+        },
+        title: {
+            left: 'center',
+            text: 'Account Chart',
+        },
+        toolbox: {
+            show:false,
+            feature: {
+                dataZoom: {
+                    yAxisIndex: 'none'
+                },
+                restore: {},
+                saveAsImage: {}
+            }
+        },
+        xAxis: {
+            type: 'date',
+            boundaryGap: false,
+        },
+        yAxis: {
+            type: 'value',
+            boundaryGap: [0, '100%']
+        },
+        dataZoom: [{
+            type: 'inside',
+            start: 0,
+            end: 100
+        }, {
+            start: 90,
+            end: 100,
+            handleIcon: 'M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
+            handleSize: '50%',
+            handleStyle: {
+                color: '#fff',
+                shadowBlur: 3,
+                shadowColor: 'rgba(0, 0, 0, 0.6)',
+                shadowOffsetX: 2,
+                shadowOffsetY: 2
+            }
+        }],
+        series: series
+    };
+    if (option && typeof option === "object") {
+        myChart.setOption(option, true);
+    }
+}
+
+
+function running_hist(hist){
+    var dom = document.getElementById("running_history");
+    var myChart = echarts.init(dom);
+
+    option = {
+        tooltip: {
+            trigger: 'axis',
+            position: function (pt) {
+                return [pt[0], '10%'];
+            }
+        },
+        title: {
+            left: 'center',
+            text: 'Strategy Operation',
+        },
+        toolbox: {
+            show:false,
+            feature: {
+                dataZoom: {
+                    yAxisIndex: 'none'
+                },
+                restore: {},
+                saveAsImage: {},
+                mark:{
+                    title:{
+                        mark:"MARK",
+                        download:"DOWNLOAD"
+                }}
+            }
+        },
+        xAxis: {
+            type: 'time',
+            boundaryGap: false,
+        },
+        yAxis: {
+            type: 'value',
+            boundaryGap: [0, '100%']
+        },
+        dataZoom: [{
+            type: 'inside',
+            start: 0,
+            end: 100
+        }, {
+            start: 90,
+            end: 100,
+            handleIcon: 'M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
+            handleSize: '50%',
+            handleStyle: {
+                color: '#fff',
+                shadowBlur: 3,
+                shadowColor: 'rgba(0, 0, 0, 0.6)',
+                shadowOffsetX: 2,
+                shadowOffsetY: 2
+            }
+        }],
+        series: [
+            {
+                name:'operation',
+                type:'line',
+                smooth:false,
+                symbol: 'none',
+                sampling: 'average',
+                itemStyle: {
+                    color: 'rgb(255, 70, 131)'
+                },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{
+                        offset: 0,
+                        color: 'rgb(255, 158, 68)'
+                    }, {
+                        offset: 1,
+                        color: 'rgb(255, 70, 131)'
+                    }])
+                },
+                data: hist
+            }
+        ]
+    };
+    ;
+    if (option && typeof option === "object") {
+        myChart.setOption(option, true);
+    }
+}
+function performance(instrument,pnl,qty){
     Highcharts.chart(instrument, {
         chart: {
                 zoomType: 'x'
@@ -511,7 +693,15 @@ function makeSortable(table) {
         }(i));
     }
 }
-
+function check_pos(pos){
+    var form = document.getElementById("strategy_form")
+    if(pos=="0"){
+        alert("ok");
+        form.submit();
+    }else{
+        return alert(pos);
+    }
+}
 // function update_waitlist(){
 	  // record all checkbox val
 		// var all = [];

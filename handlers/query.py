@@ -18,25 +18,43 @@ def generateSignature(msg, apiSecret):
     d= mac.digest()
     return base64.b64encode(d)
 
+def okex_sign(account_info,method,path,params):
+    body = json.dumps(params)
+    timestamp = f"{datetime.utcnow().isoformat()[:-3]}Z"
+    msg = f"{timestamp}{method}{path}{body}"
+    print(msg)
+    signature = generateSignature(msg, account_info["secretkey"])
+    return {
+        'Content-Type': 'application/json',
+        'OK-ACCESS-KEY': account_info["apikey"],
+        'OK-ACCESS-SIGN': signature,
+        'OK-ACCESS-TIMESTAMP': timestamp,
+        'OK-ACCESS-PASSPHRASE': account_info["passphrase"]
+    }
+def arb_symbol(symbol,real=False):
+    res=requests.get("https://www.okex.com/api/futures/v3/instruments").json()
+    contract_map={}
+    for r in res:
+        vert=f"{r['underlying_index']}-{r['alias'].replace('_','-')}"
+        contract_map[str.upper(vert)]=r["instrument_id"]
+        contract_reverse={v:k for k,v in contract_map.items()}
+    if real:
+        return contract_map.get(symbol,symbol) 
+    else:
+        return contract_reverse.get(symbol,symbol) 
+
+
 class rotate_query(object):
     def __init__(self):
         self.db_client = db_client()
-        self.active_ac = {}
-        self.contract_map = {}
-        self.contract_reverse = {}
         self.pos_dict={}
         self.new_pos_dict={}
         self.mapping = {"1":"开多","2":"开空","3":"平多","4":"平空"}
 
     @tornado.gen.coroutine
     def prepare(self):
-        res=requests.get("https://www.okex.com/api/futures/v3/instruments")
-        for r in res.json():
-            vert=f"{r['underlying_index']}-{r['alias'].replace('_','-')}"
-            self.contract_map[str.upper(vert)]=r["instrument_id"]
-            self.contract_reverse = {v:k for k,v in self.contract_map.items()}
-
         symbols=set()
+        active_ac={}
         json_obj = self.db_client.query("strategy",{"server":{"$ne":"idle"}})
 
         for stg in json_obj:
@@ -45,21 +63,22 @@ class rotate_query(object):
                 self.pos_dict.update({f"{stg['alias']}-{sym}":pos})
         for sym in list(symbols):
             s,vt_ac = sym.split(":")
-            ss = self.active_ac.get(vt_ac,set())
+            ss = active_ac.get(vt_ac,set())
             ss.add(s)
-            self.active_ac.update({vt_ac:ss})
+            active_ac.update({vt_ac:ss})
 
-        self.store()
+        self.store(active_ac)
 
-    def store(self):
+    def store(self, active_ac):
         json_obj =[]
-        for vt_ac,symbols in self.active_ac.items():
+        for vt_ac,symbols in active_ac.items():
             for symbol in list(symbols):
                 for state in ["-1","2"]:
-                    r = self.query(vt_ac, self.contract_map[symbol], state)
+                    r = self.query(vt_ac, arb_symbol(symbol,real=True), state)
                     if r.get("result",False):
-                        tmp=list(map(lambda x: dict(x,**{"account":vt_ac}),r["order_info"]))
-                        result = list(map(lambda x: dict(x,**{"strategy":x["client_oid"].split("FUTU")[0]}),tmp))
+                        result = list(map(lambda x: dict(x,**{"account":vt_ac}),r["order_info"]))
+                        result = list(map(lambda x: dict(x,**{"strategy":x["client_oid"].split("FUTU")[0]}),result))
+                        result = list(map(lambda x: dict(x,**{"instrument_id":symbol}), result))
                         json_obj += result
         if json_obj:
             json_obj=list(map(lambda x:dict(x, **{"datetime":convertDatetime(x["timestamp"])}),json_obj))
@@ -90,7 +109,7 @@ class rotate_query(object):
                 ac = msg.get(stg,{})
                 msg[stg]=ac
                 txt = ac.get(od["account"],[])
-                ding = f"> {od['instrument_id'].replace('-USD-','')}, {self.mapping[od['type']]}, {od['filled_qty']} @ {od['price_avg']}\n\n"
+                ding = f"> {od['instrument_id']}, {self.mapping[od['type']]}, {od['filled_qty']} @ {od['price_avg']}\n\n"
                 txt.append(ding)
                 msg[stg][od['account']]=txt
             ding = ""
@@ -107,7 +126,7 @@ class rotate_query(object):
     def update_pos(self, order):
         strategy,sym,ac = order["strategy"],order["instrument_id"],order["account"]
         direction,vol = order["type"],float(order["filled_qty"])
-        vt_ac = f"{self.contract_reverse[sym]}:{ac}"
+        vt_ac = f"{sym}:{ac}"
         key = f"{strategy}-{vt_ac}"
         pos_long,pos_short = self.pos_dict.get(key,[0,0])
 
@@ -225,9 +244,8 @@ class position_span(object):
 # 获取剩余持仓结算价格
 def query_price(instrument):
     url = f'{REST_HOST}/api/futures/v3/instruments/{instrument}/ticker'
-    r = requests.get(url,timeout = 10)
-    result = r.json()
-    return float(result["last"])
+    r = requests.get(url,timeout = 10).json()
+    return float(r["last"])
 
 # 订单处理
 def process_orders(order_data, pos_dict):
@@ -259,12 +277,16 @@ def process_orders(order_data, pos_dict):
         pos_dict.pnl_list.append([t,pos_dict.profit_loss])
         pos_dict.qty_list.append([t,order_qty])
 
-def get_chart(strategy, json_obj):
+def get_chart(strategy, json_obj, hist):
     df = pd.DataFrame(json_obj)
     result={}
     statistics = {}
 
     overview = {}
+    winning_count = 0
+    winning_pnl = 0
+    total_count = 0
+    total_pnl = 0
     
     if df.size > 0:
         del df["_id"]
@@ -277,16 +299,11 @@ def get_chart(strategy, json_obj):
             pos_dict = position_span(instrument)
             process_orders(per_coin_data, pos_dict)
             
-            sym = instrument.split(":")[0]
+            sym = arb_symbol(instrument.split(":")[0],real=True)
             pos_dict.calculate_position_profit(query_price(sym))
 
             # 缓存策略统计
             result[instrument] = pos_dict
-
-        winning_count = 0
-        winning_pnl = 0
-        total_count = 0
-        total_pnl = 0
 
         for instrument, position in result.items():
             statistics[instrument] = {
@@ -307,22 +324,23 @@ def get_chart(strategy, json_obj):
             total_count+=position.trade_count
             total_pnl+=position.profit_loss
 
-        avg_win = 0
-        avg_loss = 0
-        pnl_ratio = 0
-        winning_rate = 0
-        if winning_count:
-            avg_win = winning_pnl / winning_count
-        if total_count-winning_count:
-            avg_loss = (total_pnl-winning_pnl) / (total_count-winning_count)
-        if avg_loss:
-            pnl_ratio = avg_win / avg_loss * -1
-        if total_count:
-            winning_rate = winning_count / total_count
-        overview={
-            "total_count" : total_count,
-            "winning_rate" : f"{winning_rate:0.2%}",
-            "pnl_ratio" : f"{pnl_ratio:0.2f}",
-            "detail":statistics
-        }
+    avg_win = 0
+    avg_loss = 0
+    pnl_ratio = 0
+    winning_rate = 0
+    if winning_count:
+        avg_win = winning_pnl / winning_count
+    if total_count-winning_count:
+        avg_loss = (total_pnl-winning_pnl) / (total_count-winning_count)
+    if avg_loss:
+        pnl_ratio = avg_win / avg_loss * -1
+    if total_count:
+        winning_rate = winning_count / total_count
+    overview={
+        "total_count" : total_count,
+        "winning_rate" : f"{winning_rate:0.2%}",
+        "pnl_ratio" : f"{pnl_ratio:0.2f}",
+        "running_hist":list(map(lambda x:[x["timestamp"],x["op"]],hist)),
+        "detail":statistics
+    }
     return overview

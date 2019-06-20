@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block head %}
 <script src="{{static_url('js/highcharts.js')}}"></script>
-<script src="{{static_url('js/echarts.min.js')}}"></script>
+<script src="{{static_url('js/echarts.min.js')}}" charset="UTF-8"></script>
 <script>
 $(document).ready(
    function(){
@@ -16,7 +16,7 @@ $(document).ready(
       error:error,
       success:function(response){
          if(response){
-            var ss="<ul>Overview:<li>Total Count: "+ response["total_count"] +"</li><li>Winning Ratio: "+ response["winning_rate"] +"</li><li>PnL Ratio: "+ response["pnl_ratio"]+"</li></ul>";
+            var ss="<ul>Overview:<li>Total Count: "+ response["total_count"] +"</li><li>Winning Ratio: "+ response["winning_rate"] +"</li><li>PnL Ratio: "+ response["pnl_ratio"]+"</li></ul><div id='running_history' style='min-width: 310px; height: 200px; margin: 0 auto'></div>";
             var data = response["detail"];
             for(var ins in data){
                var item = data[ins];
@@ -30,9 +30,9 @@ $(document).ready(
                ss+="</ul><div id="+ins+" style='min-width: 310px; height: 400px; margin: 0 auto'></div>";
             };
             document.getElementById('stat').innerHTML = ss;
-
+            running_hist(response["running_hist"]);
             for(var ins in data){
-               render(ins, data[ins]["pnl"], data[ins]["qty"]);
+               performance(ins, data[ins]["pnl"], data[ins]["qty"]);
             };
          }else{
                document.getElementById('stat').innerHTML = "no trades";

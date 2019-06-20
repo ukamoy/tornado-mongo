@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block head %}
+<script src="{{static_url('js/echarts.min.js')}}" charset="UTF-8"></script>
+<script>
+function account_chart(obj){
+   var s = obj.value;
+   $.ajax({
+      url:"/panel/account",
+      type: "POST",
+      dataType:"json",
+      data: {"query":s},
+      beforeSend:beforeSend,
+      complete:complete,
+      error:error,
+      success:function(response){
+         if(response){
+            var ss="<div id='account_value' style='min-width: 310px; height: 400px; margin: 0 auto'></div>";
+            document.getElementById('stat').innerHTML = ss;
+            account_value(response);
+         }else{
+               document.getElementById('stat').innerHTML = "no data";
+         };
+      },
+    });
+
+}
+</script>
+{% end %}
+{% block body %}
+
+<select id="account" class="form-control" onchange="account_chart(this)">
+   <option>choose an account</option>
+   {% for item in ac_list%}
+      <option value = "{{item}}">{{item}}</option>
+   {%end%}
+</select>
+<div id="showResult"></div>
+<span id=stat></span>
+{%end%}

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
    <head>
-      <meta charset="utf-8">
+      <meta charset="UTF-8">
       <meta http-equiv="X-UA-Compatible" content="IE=edge">
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>{{ title }}</title>
@@ -35,25 +35,29 @@
              <ul class="nav navbar-nav">
                <li class="active"><a href="/dashboard">Dashboard</a></li>
                <li class="dropdown">
-                 <a href="/deploy/list/all" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Panel <span class="caret"></span></a>
+                 <a href="/dashboard/tasks/instance" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Panel <span class="caret"></span></a>
                  <ul class="dropdown-menu">
-                    <li><a href="/deploy/list/all">Deployment</a></li>
-                    <li><a href="/deploy/list/todo">To Do</a></li>
-                   <li role="separator" class="divider"></li>
                    <li class="dropdown-header">Control Panel</li>
-                   <li><a href="/ding?method=all">DingDing</a></li>
                    <li><a href="/orders">Query</a></li>
-                   <li><a href="/deploy/server">Server</a></li>
-                   <li><a href="/deploy/account">Account</a></li>
-                   <li><a href="/deploy/user">Users</a></li>
+                   <li><a href="/panel/ding?method=all">DingDing</a></li>
+                   <li><a href="/panel/server">Server</a></li>
+                   <li><a href="/panel/account">Account</a></li>
+                   <li role="separator" class="divider"></li>
+                   <li><a href="/panel/user">Users</a></li>
                  </ul>
                </li>
              </ul>
-             <ul class="nav navbar-nav navbar-right">
-               <li>
-                 <a href="#"><span class="glyphicon glyphicon-user"></span>user</a>
-               </li>
-             </ul>
+             {% if user %}
+             <ul class="nav navbar-nav navbar-right ">
+                <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown"aria-haspopup="true" aria-expanded="false"><span class="glyphicon glyphicon-user"></span> {{user["name"]}}</a>
+                <ul class="dropdown-menu">
+                <li><a href="/user">setting</a></li>
+                <li><a href="/logout">logout</a></li>
+                </ul></li>
+              </ul>
+             {% end %}
+             
            </div><!--/.nav-collapse -->
          </div>
        </nav>
