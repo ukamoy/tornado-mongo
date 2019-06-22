@@ -2,8 +2,10 @@ import tornado
 from dayu.db_conn import db_client
 from dayu.user import Member
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 
 class BaseHandler(tornado.web.RequestHandler):
+    executor = ThreadPoolExecutor(10)
     @tornado.gen.coroutine
     def initialize(self):
         self.db_client = db_client()
@@ -49,21 +51,17 @@ class BaseHandler(tornado.web.RequestHandler):
 
     def _member_db_map(self, db):
         # The returned dict object supply a uniform database access interface 
-        try:
-            print(f"{datetime.now().strftime('%y%m%d %H:%M:%S')}: {db['name']},{self.request.uri}")
-            return dict(
-                uid = db['uid'],
-                name = db['name'],
-                email = db['email'],
-                # waitlist = db['waitlist'],            
-                brief = db['brief'],
-                like = db['like'],
-                avatar = db['avatar'],
-                avatar_large = db['avatar_large'],
-                # messages = da.unread_messages(db['uid']),
-                verified = db['verified'],
-                contacter = db['contacter'],
-                group = db['group']
-            )
-        except TypeError:
-            return {}
+        self.user = {
+            "name": db.get('name', ""), 
+            "group":db.get("group", ""),
+            "email" : db.get('email', ""),
+            "brief" : db.get('brief', ""),
+            "strategy_count" : db.get('strategy_count', 0),
+            "avatar" : db.get('avatar', ""),
+            "avatar_large" : db.get('avatar_large', ""),
+            # "messages" : da.unread_messages(db.get('uid', ""),
+            "verified" : db.get('verified', ""),
+            "contacter" : db.get('contacter', ""),
+            }
+        print(f"{datetime.now().strftime('%y%m%d %H:%M:%S')}: {self.user['name']},{self.request.remote_ip},{self.request.uri}")
+        return self.user

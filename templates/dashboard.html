@@ -27,8 +27,10 @@
     <div class="table-responsive" style="margin-top: 10px">
         <table cellpadding="0" cellspacing="0" border="0" class="table-1" id="strategy_list">
             <thead>
-                <tr>
+                <tr>{%if show=="mine"%}
+                    &nbsp;{%else%}
                     <th><input type="checkbox" class="checkall" name="checkall"></th>
+                    {%end%}
                     <th>Name</th>
                     <th>Server</th>
                     <th>Position as at <div id="time" style="display:inline"></div></th>
@@ -38,32 +40,39 @@
             </thead>
             <tbody>
                 {% for d in data %}
-                <tr>
-                    <td><input type="checkbox" value="{{d['name']}}" name="cc"></td>
-                    <td><a href="/dashboard/strategy/{{d['name']}}">{{d["name"]}}</a></td>
-                    <td>{{d["server"]}}</td>
-                    <td>
+                <tr>{%if show=="mine"%}
+                    &nbsp;{%else%}
+                    <td data-label="check"><input type="checkbox" value="{{d['name']}}" name="cc"></td>
+                    {%end%}
+                    <td data-label="Name"><a href="/dashboard/strategy/{{d['name']}}">{{d["name"]}}</a></td>
+                    <td data-label="Server">{{d["server"]}}</td>
+                    <td data-label="Postion">
                         {%for sym in d['tradePos']%}
-                        <div>
+                        <div style="display:inline-table;width:60%;">
                             <span style="font-size:12px; width:80%;">{{sym}}</span>
+                        </div><div style="display:inline-table;width:15%;">
                             <span class="label label-success" id="long-{{d['alias']}}-{{sym}}" text-align="right">{{d['tradePos'][sym][0]}}</span>
+                        </div><div style="display:inline-table;width:15%;">
                             <span class="label label-danger" id="short-{{d['alias']}}-{{sym}}" text-align="right">{{d['tradePos'][sym][1]}}</span>
                         </div>
                         {%end%}
                     </td>
-                    <td><a class="btn btn-xs btn-primary" href="/chart/{{d['alias']}}" target="_blank">Chart</a>
+                    <td data-label="Profile"><a class="btn btn-xs btn-primary" href="/chart/{{d['alias']}}" target="_blank">Chart</a>
                         &nbsp;<a class="btn btn-xs btn-primary" href="http://149.28.78.5:5601/app/kibana#/discover?_g=()&_a=(columns:!(_source),filters:!(('$state':(store:appState),meta:(alias:!n,disabled:!f,index:'0c5c9850-7e27-11e9-95ef-03925e1df000',key:message,negate:!f,params:!({{d['name']}}),type:phrases,value:{{d['name']}}),query:(bool:(minimum_should_match:1,should:!((match_phrase:(message:{{d['name']}}))))))),index:'0c5c9850-7e27-11e9-95ef-03925e1df000',interval:auto,query:(language:lucene,query:''),sort:!('@timestamp',desc))" target="_blank">Log</a>
                         &nbsp;<a class="btn btn-xs btn-primary" href="/orders?name={{d['alias']}}" target="_blank">Orders</a>
                     </td>
-                    <td class="center">{{d["updatetime"]}}</td>
+                    <td data-label="Update" class="center">{{d["updatetime"]}}</td>
                 </tr>
                 {% end %}
             </tbody>
         </table>
     </div>
+    {%if show=="mine"%}
+    &nbsp;{%else%}
     <div class="row">
         <a href="javascript:;" class="btn btn-xs btn-primary" onclick="create_instance()">Create Instance</a>
     </div>
+    {%end%}
 {% else %}
     no data
 {% end %}

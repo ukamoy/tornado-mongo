@@ -82,14 +82,3 @@ body {
   background: #fff; padding: 15px; border-left: 1px solid #ddd; }
 .stdform2 .stdformbutton { margin-left: 0; padding: 20px; background: #fff; }
 
-.prompt {
-  position: relative;
-  font-size: 14px;
-  color:green;
-}
-
-.prompt_alert {
-  position: relative;
-  font-size: 14px;
-  color:red;
-}

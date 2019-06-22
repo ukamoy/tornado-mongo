@@ -22,7 +22,6 @@ class Member:
     """
     def __init__(self, entity=None):
         self._model = {
-            'uid': None,
             'name': None,
             'email': None,
             'pwd': None, 
@@ -34,7 +33,7 @@ class Member:
             'like': [],
             'verified': False,
             'contacter':[],
-            "wishlist": []
+            "strategy_count": []
         }
         
         if entity and isinstance(entity, dict):
@@ -50,20 +49,12 @@ class Member:
             return None
 
     @property 
-    def uid(self):
-        return self._model['uid']
-
-    @property 
     def name(self):
         return self._model['name']
 
     @property 
     def email(self):
         return self._model['email']
-
-    @property 
-    def wish_list(self):
-        return self._model['wish_list']
 
     @property 
     def brief(self):
@@ -169,7 +160,7 @@ class Member:
 
     def gravatar(self, email, size=64):
         gravatar_url = ("http://www.gravatar.com/avatar/%s" % 
-                        hashlib.md5(email).hexdigest() + "?")
+                        hashlib.md5(email.encode("utf-8")).hexdigest() + "?d=retro&")
         gravatar_url += urllib.parse.urlencode({'s':str(size)})
         return gravatar_url
 
@@ -212,7 +203,6 @@ class Member:
             raise exception.AuthError()
         else:
             entity = self.db_client.query_one("user",{"name": _name})
-            print("passssssssssed",self._encrypt_password(_pwd))
             # Pymongo return None value if not match one
             if not entity:
                 print("no entity")
@@ -221,7 +211,7 @@ class Member:
                 print("AuthError")
                 raise exception.AuthError()
             else:
-                print("ok")
+                print("passssssssssed",self._encrypt_password(_pwd))
                 self._model = entity
 
     def put(self):

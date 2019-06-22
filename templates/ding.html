@@ -1,9 +1,4 @@
 {% extends "base.html" %}
-{% block head %}
-<title>{{ title }}</title>
-<!-- <link href="{{static_url('css/table.css')}}" rel="stylesheet"> -->
-
-{% end %}
 {% block body %}
 {% if data %}
 <a href="/ding?method=new" class="btn btn-sm btn-primary">New Ding Token</a>
@@ -11,17 +6,17 @@
     <table cellpadding="0" cellspacing="0" border="0" class="table-1" id="strategy_list">
         <thead>
             <tr>
-                <th>name</th>
-                <th>token</th>
-                <th>operate</th>
+                <th>Name</th>
+                <th>Token</th>
+                <th>Operator</th>
             </tr>
         </thead>
         <tbody>
             {% for d in data %}
             <tr class="odd gradeX">
-                <td><a href="/ding?name={{d['name']}}">{{d["name"]}}</a></td>
-                <td>{{d["token"]}}</td>
-                <td><a class="btn btn-sm btn-danger" href="javascript:;" onclick = "remove_row(this)" name="{{d['name']}}">del</a></td>
+                <td data-label="Name"><a href="/ding?name={{d['name']}}">{{d["name"]}}</a></td>
+                <td data-label="Token">{{d["token"]}}</td>
+                <td data-label="Operator"><a class="btn btn-sm btn-danger" href="javascript:;" onclick = "remove_row(this)" name="{{d['name']}}">del</a></td>
             </tr>
             {% end %}
         </tbody>

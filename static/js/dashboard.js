@@ -65,25 +65,34 @@ function create_instance(){
     if(result.length==0){
         alert("please pick strategy");
     }else{
-        $.ajax({
-            url:"/dashboard/tasks/add",
-            type: "POST",
-            dataType:"json",
-            data: result,
-            beforeSend:task_processing,
-            error:null,
-            complete:task_complete,
-            success:function(response){
-                if(response){
-                    window.location.href="/dashboard/tasks/instance";
-                }else{
-                    alert("create instance failed");
-                }
-            },
-        });
+        var mark=[];
+        for(var stg in result){
+            if(result[stg]["id"] != "idle"){
+                mark.push(result[stg]['name']);
+            }
+        }
+        if(mark.length==0){
+            $.ajax({
+                url:"/dashboard/tasks/add",
+                type: "POST",
+                dataType:"json",
+                data: result,
+                beforeSend:task_processing,
+                complete:task_complete,
+                success:function(response){
+                    if(response){
+                        window.location.href="/dashboard/tasks/instance";
+                    }else{
+                        alert("create instance failed");
+                    }
+                },
+            });
+        }else{
+            alert(mark+": strategy already in running");
+        }
     };
 }
-	
+
 function gether_table(){
 	var tr = $("#table tr");
 	var result = [];
@@ -167,6 +176,62 @@ function check_name_success(response){
         $("#nametip").html('该名称可用');
         document.getElementById("submitbutton").disabled=false;
     }
+}
+function check_pwd(){
+    var originName = $.trim($("input[name='pwd']").val());
+    if(originName){
+        $.ajax({
+            url:"/dy",
+            type: "GET",
+            dataType:"json",
+            data: {"checkPwd":originName},
+            success:function(response){
+                if(response){
+                    document.getElementById("pwd_tip").className ="prompt";
+                    $("#pwd_tip").html('passed');
+                    document.getElementById("submitbutton").disabled=false;
+                }else{
+                    document.getElementById("pwd_tip").className ="prompt_alert";
+                    $("#pwd_tip").html('wrong pwd');
+                    $("#submitbutton").attr({"disabled":"disabled"});
+                }
+            }
+        });
+    }
+    else{
+        $("#pwd_tip").html('');
+    }
+}
+function check_confirm_pwd(){
+    var new_pwd = $.trim($("input[name='new_pwd']").val());
+    var confirm_pwd = $.trim($("input[name='confirm_pwd']").val());
+    if(new_pwd.length>7){
+        if(new_pwd==confirm_pwd){
+            $.ajax({
+                url:"/reset",
+                type: "POST",
+                dataType:"json",
+                data: {"new_pwd":new_pwd},
+                success:function(response){
+                    if(response){
+                        document.getElementById("confirm_pwd_tip").className ="prompt";
+                        $("#confirm_pwd_tip").html('update success');
+                    }else{
+                        document.getElementById("confirm_pwd_tip").className ="prompt_alert";
+                        $("#confirm_pwd_tip").html('update failed');
+                    }
+                },
+            });
+            
+        }else{
+            document.getElementById("confirm_pwd_tip").className ="prompt_alert";
+            $("#confirm_pwd_tip").html('not same');
+        }
+    }else{
+        document.getElementById("confirm_pwd_tip").className ="prompt_alert";
+            $("#confirm_pwd_tip").html('password should at least 8 digits');
+    }
+    
 }
 function getAccount(_id) {
     $.ajax({

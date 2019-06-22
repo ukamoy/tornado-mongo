@@ -8,9 +8,21 @@ import os
 import json
 import requests
 from urllib.parse import urlencode
-from time import sleep
+from time import sleep,time
 from datetime import datetime
+from tornado.concurrent import run_on_executor
 IMAGE = "daocloud.io/xingetouzi/vnpy-fxdayu:v1.1.20"
+class test(BaseHandler):
+    #@tornado.web.authenticated
+    @tornado.gen.coroutine
+    def post(self,*args, **kwargs):
+        print(self.request.arguments,args)
+        x=self.get_argument("test")
+        yield self.awake(x)
+    @run_on_executor
+    def awake(self,var):
+        sleep(8)
+        print("sleep 8",time())
 
 class operator(BaseHandler):
     @tornado.web.authenticated
@@ -45,7 +57,6 @@ class operator(BaseHandler):
                                 self.db_client.update_one("strategy",{"name":stg_name},{"server":"idle"})
                                 self.db_client.insert_one("operation",{"name":stg_name,"op":0,"timestamp":now})
                                 r=self.archive(server, stg_name, path)
-                                
                                 res=True
                             else:
                                 return self.finish(json.dumps({"error":"operation halt failed"}))
@@ -193,14 +204,11 @@ class mainipulator(BaseHandler):
                 if pos[1]:
                     pos_dict.update({f"{sym}_SHORT":pos[1]})
             self.finish(pos_dict)
-        elif self.get_argument("task_id", None):
-            t = self.get_argument("task_id")
-            n = self.get_argument("stg_name")
-            qry = {"_id":ObjectId(t)}
-            r = self.db_client.query_one("tasks",qry)
-            running_stg = r["running"].append(n)
-            self.db_client.update_one("tasks",qry,{"running":running_stg})
-            msg = True if r else False
+        elif self.get_argument("checkPwd", None):
+            user=self.current_user_entity()
+            msg=False
+            if user.check_password(self.get_argument("checkPwd")):
+                msg=True
             self.finish(json.dumps(msg))
         elif self.get_argument("getAccount", None):
             json_obj = self.db_client.query("exchange",{})
@@ -211,7 +219,7 @@ class mainipulator(BaseHandler):
 class clear_pos(BaseHandler):
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):
-        print("mainipulator post",args, self.request.arguments, "body:", self.request.body_arguments)
+        print("clearpos post",args, self.request.arguments, "body:", self.request.body_arguments)
         d=self.get_argument("symbol").split("_")
         qty=self.get_argument("qty")
         stg=filter_name(self.get_argument("strategy"))
@@ -343,5 +351,6 @@ handlers = [
     (r"/operator/clear_pos", clear_pos), 
     (r"/dy", mainipulator), 
     (r"/q", public),
-    (r"/old_operator", old_operator)
+    (r"/old_operator", old_operator),
+    (r"/test", test)
 ]

@@ -12,29 +12,29 @@
         <table cellpadding="0" cellspacing="0" border="0" class="table-1">
             <thead>
                 <tr>
-                    <th>datetime</th>
-                    <th>symbol</th>
-                    <th>type</th>
-                    <th>price</th>
-                    <th>volume</th>
-                    <th>ordered price</th>
-                    <th>ordered Vol</th>
-                    <th>client_oid</th>
-                    <th>order id</th>
+                    <th>Datetime</th>
+                    <th>Symbol</th>
+                    <th>Type</th>
+                    <th>Pice</th>
+                    <th>Volume</th>
+                    <th>Ordered Price</th>
+                    <th>Ordered Vol</th>
+                    <th>Client_OID</th>
+                    <th>Order ID</th>
                 </tr>
             </thead>
             <tbody>
                 {% for d in data %}
                 <tr>
-                    <td>{{d["datetime"]}}</td>
-                    <td>{{d["instrument_id"]}}</td>
-                    <td>{{d["type"]}}</td>
-                    <td>{{d["price_avg"]}}</td>
-                    <td>{{d["filled_qty"]}}</td>
-                    <td>{{d["price"]}}</td>
-                    <td>{{d["size"]}}</td>
-                    <td>{{d["client_oid"]}}</td>
-                    <td>{{d["order_id"]}}</td>
+                    <td data-label="Datetime">{{d["datetime"]}}</td>
+                    <td data-label="Symbol">{{d["instrument_id"]}}</td>
+                    <td data-label="Type">{{d["type"]}}</td>
+                    <td data-label="Price">{{d["price_avg"]}}</td>
+                    <td data-label="Volume">{{d["filled_qty"]}}</td>
+                    <td data-label="Ordered Price">{{d["price"]}}</td>
+                    <td data-label="Ordered Vol">{{d["size"]}}</td>
+                    <td data-label="Client_OID">{{d["client_oid"]}}</td>
+                    <td data-label="Order ID">{{d["order_id"]}}</td>
                 </tr>
                 {% end %}
             </tbody>

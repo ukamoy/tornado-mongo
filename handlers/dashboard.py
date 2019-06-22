@@ -12,17 +12,16 @@ class dashboard(BaseHandler):
     @tornado.web.authenticated
     @tornado.gen.coroutine
     def get(self):
-        current_user = self.get_current_user()
-        qry = {"Author":current_user["name"]}
+        qry = {"Author":self.user["name"]}
         show = ""
-        if current_user["group"] in ["xinge","zeus"]:
+        if self.user["group"] in ["xinge","zeus"]:
             show="all"
             if self.get_argument("display",None):
                 qry = {}
                 show="mine"
 
         json_obj = self.db_client.query("strategy",qry,[('_id', -1)])
-        self.render("dashboard.html", user=current_user, title = "DASHBOARD", data=json_obj,show=show)
+        self.render("dashboard.html", user=self.user, title = "DASHBOARD", data=json_obj,show=show)
 
 class strategy(BaseHandler):
     @tornado.web.authenticated
@@ -32,11 +31,11 @@ class strategy(BaseHandler):
         if strategy:
             for pos in strategy["tradePos"].values():
                 s+=(pos[0]+pos[1])
-        self.render("strategy.html", title = "Strategy", data = strategy, pos=s)
-
+        self.render("strategy.html", user=self.user, title = "Strategy", data = strategy, pos=s)
+    
+    @tornado.web.authenticated
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):
-        current_user = self.get_current_user()
         post_values = ['trade_symbols','trade_symbols_ex','trade_symbols_ac',
         'assist_symbols','assist_symbols_ex','assist_symbols_ac']
         strategy = {}
@@ -72,7 +71,7 @@ class strategy(BaseHandler):
             self.db_client.update_one("strategy", flt, strategy)
         else:
             strategy["server"] = "idle"
-            strategy["Author"] = current_user["name"]
+            strategy["Author"] = self.user["name"]
             strategy["createtime"] = datetime.now().strftime("%Y%m%d %H:%M")
             strategy["updatetime"] = strategy["createtime"]
             self.db_client.insert_one("strategy", strategy)
@@ -82,7 +81,6 @@ class strategy(BaseHandler):
 class tasks(BaseHandler):
     @tornado.web.authenticated
     def get(self, *args, **kwargs):
-        current_user = self.get_current_user()
         admin = True
 
         if args[0]=="instance":
@@ -97,21 +95,20 @@ class tasks(BaseHandler):
         else:
             return self.finish()
 
-        if current_user["group"]!="zeus":
-            qry.update({"Author" : current_user["name"]})
+        if self.user["group"]!="zeus":
+            qry.update({"Author" : self.user["name"]})
             admin = False
         
         json_obj = self.db_client.query("tasks",qry,[('_id', -1)])
-        self.render("tasks.html", title = title, data = json_obj, serv = serv_name,admin=admin)
-  
+        self.render("tasks.html", user=self.user, title = title, data = json_obj, serv = serv_name,admin=admin)
+    @tornado.web.authenticated
     def post(self, *args, **kwargs):
-        current_user = self.get_current_user()
         task_id = datetime.now().strftime("%Y%m%d%H%M%S%f")[:-3]
         stg_list = list(self.request.arguments.keys())
         for strategy in stg_list:
             args = {
                 "task_id" : task_id,
-                "Author" : current_user["name"],
+                "Author" : self.user["name"],
                 "status" : 0,
                 "server" : "idle",
                 "strategy" : strategy
@@ -148,7 +145,7 @@ class tasks(BaseHandler):
 class chart(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
-        self.render("chart.html", title = f"{args[0]} Chart")
+        self.render("chart.html", user=self.user, title = f"{args[0]} Chart")
     def post(self,*args,**kwargs):
         strategy = args[0]
         json_obj = self.db_client.query("orders",{"strategy":strategy})
@@ -167,8 +164,9 @@ class orders(BaseHandler):
             name=self.get_argument("name")
             r=self.db_client.query("orders",{"strategy":name},[('datetime', -1)])
             enquiry=False
-        self.render("orders.html", title = f"{name} ORDERS", data=r, enquiry=enquiry)
+        self.render("orders.html", user=self.user, title = f"{name} ORDERS", data=r, enquiry=enquiry)
         
+    @tornado.web.authenticated
     @tornado.gen.coroutine
     def post(self):
         result = []
@@ -184,7 +182,7 @@ class orders(BaseHandler):
             else:
                 r["datetime"]=convertDatetime(r["timestamp"])
                 result=[r]
-        self.render("orders.html", title = "Orders Result", data = result, enquiry=False)
+        self.render("orders.html", user=self.user, title = "Orders Result", data = result, enquiry=False)
 
 class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
     users = set()  # 用来存放在线用户的容器

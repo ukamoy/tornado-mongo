@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{%block head%}
+<style type="text/css">
+ol, ul {  
+list-style:none outside none;  
+}  
+a{color:#106aa9; text-decoration:none;}  
+.navC{border-bottom:1px solid #cce2ed;}  
+.navC li{border-left:1px solid #cce2ed;border-right:1px solid #cce2ed;}  
+.navC li a{border-top:1px solid #cce2ed;background:#f1f6fa;font-size:14px;}  
+.navC li a:hover{background:#ffffff;text-decoration:none;}  
+.navC .current,.navC li:hover{border-left:1px solid #cce2ed;border-right:1px solid #cce2ed;}  
+.navC li:hover a{border-top:1px solid #cce2ed;}  
+.navC .current a,.navC .current a:hover{background:#ffffff;border-bottom:1px solid #ffffff;color:#333333;border-top:1px solid #cce2ed;}  
+.navC .current a{ font-weight:700;}  
+  
+.navC{height:28px;line-height:28px;}  
+    .navC ul{padding-left:10px;float:left;margin-bottom:-1px;} /*ie6*/  
+        .navC li{float:left;margin-right:5px;}  
+            .navC li a{float:left;display:block;padding:0 15px;height:28px;overflow:hidden;margin-top:-1px;_position:relative;}  
+  
+.mb20{ margin:30px; }  
+.mb20 div{
+    display: none;
+}
+.mb20 .show{
+    display: block;
+}
+.input_control{
+  width:360px;
+  margin:20px auto;
+}
+input[type="password"],#btn1,#btn2{
+  box-sizing: border-box;
+  font-size:1.4em;
+  height:1.5em;
+  border-radius:4px;
+  border:1px solid #c8cccf;
+  color:#6a6f77;
+  -web-kit-appearance:none;
+  -moz-appearance: none;
+  display:block;
+  outline:0;
+  padding:0 1em;
+  text-decoration:none;
+}
+input[type="password"]:focus{
+  border:1px solid cornflowerblue;
+}
+</style>
+
+{% end %}
+{% block body %}
+<div class="table-responsive" style="margin-top: 10px">
+	<div class="navC mb20">  
+		<ul>  
+			<li name="tab-head" class="current"><a href="javascript:;" hidefocus="true">User Info</a></li>  
+			<li name="tab-head"><a href="javascript:;" hidefocus="true">Change Password</a></li>  
+			<li name="tab-head"><a href="javascript:;" hidefocus="true">Setting</a></li>  
+		</ul>  
+	</div>  
+	<div class="mb20">
+		<div name = "tab-content" class="show">
+			<table>
+				<tr>
+				<td>
+					<img src="{{user_info['avatar_large']}}">
+				</td>
+				<td>
+					<label class="control-label">Group: {{user_info['group']}}</label><br>
+					<label class="control-label">Own: {{user_info['strategy_count']}} strategies</label>
+				</td>
+				</tr>
+			</table>
+		</div>
+		<div name = "tab-content">
+			<form class="well" id="form" action="/reset" method="post">
+				
+				<label class="control-label" for="Password" >Current Password</label>
+				<span id="pwd_tip" class="prompt"></span><br>
+				<input type="password" name="pwd" onblur="check_pwd()" required autofocus><br>
+				<label class="control-label" for="new_Password" >New Password</label><br>
+				<input type="password" name="new_pwd" required><br>
+				<label class="control-label" for="confirm_Password" >Confirm Password</label><br>
+				<input type="password" name="confirm_pwd" required><br>
+				<button class="btn btn-md btn-primary" type="button" disabled="disabled" onclick="check_confirm_pwd()" id="submitbutton">submit</button>
+				<span id="confirm_pwd_tip" class="prompt"></span>
+			</form>
+		</div>
+		<div name = "tab-content">content</div>
+	</div>
+</div>
+
+
+<script type="text/javascript">
+var tabs = document.getElementsByName('tab-head');
+var contents = document.getElementsByName('tab-content');
+(function changeTab(tab) {
+	for(var i = 0, len = tabs.length; i < len; i++) {
+		tabs[i].onclick = showTab;
+	}
+})();
+
+function showTab() {
+    for(var i = 0, len = tabs.length; i < len; i++) {
+        if(tabs[i] === this) {
+            tabs[i].className = 'current';
+            contents[i].className = 'show';
+        } else {
+            tabs[i].className = '';
+            contents[i].className = '';
+        }
+	}
+}
+</script>
+{% end %}

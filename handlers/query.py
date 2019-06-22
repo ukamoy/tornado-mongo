@@ -4,13 +4,17 @@ import tornado
 from dayu.db_conn import db_client
 import os,json,traceback,re
 from datetime import datetime
-from dayu.util import convertDatetime, dingding
+from dayu.util import convertDatetime, dingding, get_server
 from urllib.parse import urlencode
 import hmac
 import base64
-
+from tornado.concurrent import run_on_executor
+from concurrent.futures import ThreadPoolExecutor
+from time import sleep
 import pandas as pd
+from config import working_path
 REST_HOST = "https://www.okex.com"
+IMAGE = "daocloud.io/xingetouzi/vnpy-fxdayu:v1.1.20"
 
 def generateSignature(msg, apiSecret):
     """OKEX签名V3"""
@@ -45,6 +49,7 @@ def arb_symbol(symbol,real=False):
 
 
 class rotate_query(object):
+    executor = ThreadPoolExecutor(10)
     def __init__(self):
         self.db_client = db_client()
         self.pos_dict={}
@@ -68,7 +73,69 @@ class rotate_query(object):
             active_ac.update({vt_ac:ss})
 
         self.store(active_ac)
+        self.auto_launch()
+        #self.test()
+    def test(self):
+        for i in range(10):
+            url = "http://localhost:9999/test"
+            body=urlencode({"test":i})
+            client = tornado.httpclient.AsyncHTTPClient()
+            client.fetch(url,method='POST',body=body)
+    
+    @tornado.gen.coroutine
+    def auto_launch(self):
+        not_run = self.db_client.query("tasks",{"status":0,"server":"idle"})
+        if not_run:
+            stg_list = list(map(lambda x: x["strategy"],not_run))
+            dingding("INSTANCE",f"TRY AUTO LAUNCH: {stg_list}")
+            servers = self.db_client.query("server",{"type":"trading"})
+            servers_list = list(map(lambda x: x["server_name"],servers))
+            running_instance = self.db_client.query("tasks",{"status":1})
+            running_serv= list(map(lambda x: x["server"],running_instance))
 
+            for instance in not_run:
+                serv=None
+                for serv_r in list(set(sorted(running_serv))):
+                    print("find existing:",instance["strategy"],serv_r,running_serv.count(serv_r))
+                    if running_serv.count(serv_r)<7:
+                        serv=serv_r
+                        running_serv.append(serv)
+                        break
+                if not serv:
+                    f = sorted(list(set(servers_list)^set(running_serv)))
+                    print("NEW servers:",f)
+                    if f:
+                        serv=f[0]
+                        running_serv.append(serv)
+                    else:
+                        dingding("INSTANCE","Auto-launch failed, NEED NEW SERVER")
+                        break
+                #yield self.test2(serv,instance["strategy"],instance["task_id"])
+                yield self.launch_process(serv,instance["strategy"],instance["task_id"])
+    @run_on_executor
+    def test2(self,server_name,stg_name,task_id):
+        sleep(8)
+        print("888888")
+    @run_on_executor
+    def launch_process(server_name,stg_name,task_id):
+        server = get_server(server_name)
+        if server:
+            container = server.get(stg_name)
+            if not container:
+                r = server.create(
+                    IMAGE, # 镜像名
+                    stg_name, # 策略名
+                    f"{working_path}/{task_id}/{stg_name}"
+                )
+                print("create container:",r)
+            
+            status = server.start(stg_name)
+            if status == "running":
+                now = int(datetime.now().timestamp()*1000)
+                self.db_client.update_one("tasks",{"strategy":stg_name,"task_id":task_id},{"server":server_name,"status":1})
+                self.db_client.update_one("strategy",{"name":stg_name},{"server":server_name})
+                self.db_client.insert_one("operation",{"name":stg_name,"op":1,"timestamp":now})
+                
     def store(self, active_ac):
         json_obj =[]
         for vt_ac,symbols in active_ac.items():

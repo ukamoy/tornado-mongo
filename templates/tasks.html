@@ -28,12 +28,12 @@
             <tbody>
                 {% for d in data %}
                 <tr>
-                    <td><a href="/deploy/assignment/{{d['task_id']}}">{{d["task_id"]}}</a></td>
+                    <td data-label="Task ID"><a href="/deploy/assignment/{{d['task_id']}}">{{d["task_id"]}}</a></td>
                     {%if admin%}
-                    <td>{{d["Author"]}}</td>
+                    <td data-label="Author">{{d["Author"]}}</td>
                     {%end%}
-                    <td>{{d["strategy"]}}</td>
-                    <td class="center">
+                    <td data-label="Strategy">{{d["strategy"]}}</td>
+                    <td data-label="Server" class="center">
                         {%if serv%}
                         <select id="server-{{d['strategy']}}" class="form-control">
                             <option value = "idle" selected="selected">idle</option>
@@ -49,7 +49,7 @@
                         {{ d["server"] }}
                         {%end%}
                     </td>
-                    <td>
+                    <td data-label="Operator">
                         {%if d["status"]>0%}
                         <a class="btn btn-xs btn-success" href="javascript:;" onclick="operator(this)" name="launch-{{d['strategy']}}-{{d['task_id']}}" disabled="disabled" style="pointer-events:none">Launch</a>
                         &nbsp;<a class="btn btn-xs btn-danger" href="javascript:;" onclick="operator(this)" name="halt-{{d['strategy']}}-{{d['task_id']}}">Halt</a>&nbsp;
@@ -66,7 +66,7 @@
 
                     </td>
                     {%if title == "INSTANCE" %}
-                    <td>
+                    <td data-label="Rectify">
                         <a class="btn btn-xs btn-warning" href="javascript:;" onclick="clear_pos(this)" name="{{d['strategy']}}">Clear Pos</a>
                         <a class="btn btn-xs btn-danger" href="javascript:;" onclick="operator(this)" name="delete-{{d['strategy']}}-{{d['task_id']}}">Delete</a>
                     </td>

@@ -16,7 +16,7 @@ class assignment(BaseHandler):
         json_obj = self.db_client.query("strategy",{"name":{"$in":stg_list}}) 
         servers = self.db_client.query("server",{},[('_id', -1)])
         serv_name = list(map(lambda x: x["server_name"], servers))
-        self.render("assign.html", title = "ASSIGN SERVER (Remote File Dispatcher)", data = json_obj, serv = serv_name, task_id=args[0])
+        self.render("assign.html", user=self.user, title = "ASSIGN SERVER (Remote File Dispatcher)", data = json_obj, serv = serv_name, task_id=args[0])
     
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):
@@ -43,7 +43,7 @@ class server(BaseHandler):
             return self.redirect("/dashboard")
 
         json_obj = self.db_client.query("server",{},[('_id', -1)])
-        self.render("server.html", title = "SERVER MGMT", data = json_obj)
+        self.render("server.html", user=self.user, title = "SERVER MGMT", data = json_obj)
     @tornado.gen.coroutine
     def post(self):
         branch = self.get_argument("branch")
@@ -74,7 +74,7 @@ class account(BaseHandler):
     def get(self,*args,**kwargs):
         accounts = self.db_client.query("account_value",{})
         ac_list = list(set(map(lambda x: x["account"], accounts)))
-        self.render("account.html", title = f"Account Chart", ac_list=ac_list)
+        self.render("account.html", user=self.user, title = f"Account Chart", ac_list=ac_list)
     def post(self,*args,**kwargs):
         ac = self.get_argument("query")
         ac_hist = self.db_client.query("account_value",{"account":ac})
@@ -93,11 +93,11 @@ class ding_info(BaseHandler):
         if self.get_argument("method", None):
             qry = self.get_argument("method")
             json_obj={} if qry=="new" else self.db_client.query("ding",{})
-            self.render("ding.html",title = "DINGDING",data = json_obj,edit=None)
+            self.render("ding.html", user=self.user, title = "DINGDING",data = json_obj,edit=None)
         else:
             qry = self.get_argument("name")
             json_obj= self.db_client.query_one("ding",{"name":qry})
-            self.render("ding.html",title = "DINGDING",data = {},edit=json_obj)
+            self.render("ding.html", user=self.user, title = "DINGDING",data = {},edit=json_obj)
 
     def post(self,*args,**kwargs):
         if self.get_argument("delete",None):

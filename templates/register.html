@@ -1,0 +1,45 @@
+{% include "common/header.html" %}
+<div id="wrapper">
+	<div class="primary-wrapper">
+	<div class="primary" >
+		<div class="primary-item-container">
+
+			{% if errors %}
+				{% for error in errors %}
+					<p style="color:red">{{ error }}</p>
+				{% end %}
+			{% end %}
+
+			<form id="regist-form" action="/register" method="post">
+
+				<div class="input-prepend">
+					<span class="add-on"><i class="icon-user"></i></span>
+					<input class="span2 inputbox" type="text" name="name" placeholder="用户名" autofocus>
+				</div><!-- end of "input-prepend"-->
+
+				<div class="input-prepend">
+					<span class="add-on"><i class="icon-key"></i></span>
+					<input class="span2 inputbox" type="password" name="pwd" placeholder="密码">
+				</div><!-- end of "input-prepend"-->
+
+				<div class="input-prepend">
+					<span class="add-on"><i class="icon-key"></i></span>
+					<input class="span2 inputbox" type="password" name="cpwd" placeholder="重复输入密码">
+				</div><!-- end of "input-prepend"-->
+
+				<div class="input-prepend">
+					<span class="add-on"><i class="icon-envelope"></i></span>
+					<input class="span2 inputbox" type="text" name="email" placeholder="邮箱">
+				</div><!-- end of "input-prepend"-->
+				
+
+				<input class="button submit-button" type="submit" value="提交">
+			</form>
+			
+
+		</div>
+	</div>
+	</div>
+
+</div> <!-- Closing of wrapper -->   
+{% include "common/footer.html" %}
