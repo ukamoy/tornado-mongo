@@ -14,9 +14,26 @@ function account_chart(obj){
       error:error,
       success:function(response){
          if(response){
-            var ss="<div id='account_value' style='min-width: 310px; height: 400px; margin: 0 auto'></div>";
+            var ss = "";
+            for(var coin in response){
+               ss+="<div id='account_value_"+coin+"' style='min-width: 300px; height: 250px; margin: 0 auto'></div>";
+            }
+            
             document.getElementById('stat').innerHTML = ss;
-            account_value(response);
+            for(var coin in response){
+                var dom = document.getElementById("account_value_"+coin);
+                var myChart = echarts.init(dom);
+                var option = account_value(response[coin],coin);
+                if (option && typeof option === "object") {
+                    myChart.setOption(option, true);
+                    // window.onresize = function () {
+                    //     //重置容器高宽
+                    //     dom_size();
+                    //     myChart.resize();
+                    // };
+                }
+            }
+            
          }else{
                document.getElementById('stat').innerHTML = "no data";
          };

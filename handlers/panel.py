@@ -74,17 +74,22 @@ class account(BaseHandler):
     def get(self,*args,**kwargs):
         accounts = self.db_client.query("account_value",{})
         ac_list = list(set(map(lambda x: x["account"], accounts)))
-        self.render("account.html", user=self.user, title = f"Account Chart", ac_list=ac_list)
+        self.render("account.html", user=self.user, title = f"Account Chart", ac_list=sorted(ac_list))
+    
+    @tornado.gen.coroutine
     def post(self,*args,**kwargs):
-        ac = self.get_argument("query")
-        ac_hist = self.db_client.query("account_value",{"account":ac})
-        b=list(map(lambda x:[x["date"],x["FUTURE"]],ac_hist))
-        c=list(map(lambda x:x[1],b))
-        d=list(dict(c).keys())+list(dict(c).values())
+        ac_hist = self.db_client.query("account_value",{"account":self.get_argument("query")})
+        b=list(map(lambda x: [x["date"],x["FUTURE"]],ac_hist))
+        c=list(map(lambda x: x[1],b))
+        coins=sum(list(map(lambda x: list(x.keys()),c)),[])
         coin_dict={}
-        for k in d:
-            coin_dict[k] = list(map(lambda x: x[1][k],b))
-        coin_dict.update({"date":list(map(lambda x: x[1],b))})
+        usdt_dict = {}
+        for k in list(set(coins)):
+            prices = self.db_client.query("coin_value",{"coin":k})
+            p={d["date"]:d["value"] for d in prices}
+            usdt_dict = {d[0]:d[1][k]*p[d[0]]+usdt_dict.get(d[0],0) for d in b}
+            coin_dict[k] = list(map(lambda x: [x[0],x[1][k]], b))
+        coin_dict.update({"USDT-equivalent":[[k,v] for k,v in usdt_dict.items()]})
         self.finish(json.dumps(coin_dict))
 
 class ding_info(BaseHandler):

@@ -1,6 +1,6 @@
 import tornado.web
 from handlers import BaseHandler
-from handlers.query import generateSignature, query_price,okex_sign
+from handlers.query import generateSignature, query_price, okex_sign, arb_symbol, OKEX_REST_HOST
 from dayu.util import server_conn, get_server, filter_name, dingding
 from config import working_path
 import re
@@ -11,6 +11,7 @@ from urllib.parse import urlencode
 from time import sleep,time
 from datetime import datetime
 from tornado.concurrent import run_on_executor
+
 IMAGE = "daocloud.io/xingetouzi/vnpy-fxdayu:v1.1.20"
 class test(BaseHandler):
     #@tornado.web.authenticated
@@ -113,8 +114,7 @@ class old_operator(BaseHandler):
     @tornado.web.authenticated
     @tornado.gen.coroutine
     def post(self,*args, **kwargs):
-        current_user = self.get_current_user()
-        if not current_user["group"] == "zeus":
+        if not self.user["group"] == "zeus":
             return False
         stg_name = self.get_argument('name',None)
         method = self.get_argument('method',None)
@@ -219,12 +219,13 @@ class mainipulator(BaseHandler):
 class clear_pos(BaseHandler):
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):
+        current_user = self.get_current_user()
         print("clearpos post",args, self.request.arguments, "body:", self.request.body_arguments)
         d=self.get_argument("symbol").split("_")
         qty=self.get_argument("qty")
         stg=filter_name(self.get_argument("strategy"))
         sym,ac,direction = d
-        instrument = self.arb_symbol(sym.split(":")[0])
+        instrument = arb_symbol(sym.split(":")[0])
 
         account_info = self.db_client.query_one("account",{"name":ac})
         open_orders = self.query_open_orders(account_info,instrument)  
@@ -235,22 +236,14 @@ class clear_pos(BaseHandler):
         len_cancel_order = len(need_to_cancel)
         oids = self.cancel_order(account_info, instrument, (list(set(need_to_cancel))))
         if len(oids.result())>0:
-            dingding("INSTANCE CONTROL",f"FOR {stg}, error in cancelling orders")
+            dingding("INSTANCE CONTROL",f"{stg}, error in cancelling orders")
         else:
             r = self.close_position(account_info, stg, instrument, direction, qty)
             print(r)
             if r.get("result",False):
-                dingding("INSTANCE CONTROL",f"FOR {stg}, admin cancelled {len_cancel_order} open orders and closed postion")
+                dingding("INSTANCE CONTROL",f"> CLEAR POSITION: {stg}\n\n {current_user['name']} cancelled {len_cancel_order} open orders and closed postion")
             else:
-                dingding("INSTANCE CONTROL",f"FOR {stg}, error in close position:{r}")
-
-    def arb_symbol(self, symbol):
-        res=requests.get("https://www.okex.com/api/futures/v3/instruments")
-        contract_map={}
-        for r in res.json():
-            vert=f"{r['underlying_index']}-{r['alias'].replace('_','-')}"
-            contract_map[str.upper(vert)]=r["instrument_id"]
-        return contract_map.get(symbol,symbol)
+                dingding("INSTANCE CONTROL",f"{stg}, error in close position:{r}")
 
     def close_position(self, account_info, strategy, instrument, direction, qty):
         data={
@@ -281,7 +274,7 @@ class clear_pos(BaseHandler):
         }
         #headers = okex_sign(account_info,"POST",path,data)
         print(headers,path)
-        url = f"https://www.okex.com{path}"
+        url = f"{OKEX_REST_HOST}{path}"
         r = requests.post(url, headers = headers, data=data, timeout =10)
         return r.json()
     @tornado.gen.coroutine
@@ -299,7 +292,7 @@ class clear_pos(BaseHandler):
                     'OK-ACCESS-TIMESTAMP': timestamp,
                     'OK-ACCESS-PASSPHRASE': account_info["passphrase"]
                 }
-                url = f"https://www.okex.com{path}"
+                url = f"{OKEX_REST_HOST}{path}"
                 r = requests.post(url, headers = headers, timeout =10).json()
                 if r.get("result",False):
                     oids.remove(oid)
@@ -308,28 +301,18 @@ class clear_pos(BaseHandler):
         return oids
     @tornado.gen.coroutine
     def query_open_orders(self, account_info, symbol):
-        timestamp = f"{datetime.utcnow().isoformat()[:-3]}Z"
         path = f'/api/futures/v3/orders/{symbol}'
         params={"state":"6","instrument_id":symbol,"limit":100}
         path = f"{path}?{urlencode(params)}"
-
-        msg = f"{timestamp}GET{path}"
-        signature = generateSignature(msg, account_info["secretkey"])
-        headers = {
-            'Content-Type': 'application/json',
-            'OK-ACCESS-KEY': account_info["apikey"],
-            'OK-ACCESS-SIGN': signature,
-            'OK-ACCESS-TIMESTAMP': timestamp,
-            'OK-ACCESS-PASSPHRASE': account_info["passphrase"]
-        }
-        url = f"https://www.okex.com{path}"
+        headers=okex_sign(account_info,"GET",path,params)
+        url = f"{OKEX_REST_HOST}{path}"
         r = requests.get(url, headers = headers, timeout =10)
-        
         return r.json()
 
 class public(BaseHandler):
     @tornado.gen.coroutine
     def get(self):
+        print(self.request.arguments)
         member = self.db_client.query_one("user", {"auth": self.get_cookie('auth')})
         if member:
             if self.get_argument("strategy", None):

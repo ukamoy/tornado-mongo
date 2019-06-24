@@ -20,7 +20,7 @@ class dashboard(BaseHandler):
                 qry = {}
                 show="mine"
 
-        json_obj = self.db_client.query("strategy",qry,[('_id', -1)])
+        json_obj = self.db_client.query("strategy",qry,[('updatetime', -1)])
         self.render("dashboard.html", user=self.user, title = "DASHBOARD", data=json_obj,show=show)
 
 class strategy(BaseHandler):

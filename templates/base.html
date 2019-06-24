@@ -17,9 +17,10 @@
     </head>
    <body>
       
-      <div class="zhezhao" id="zhezhao"></div> 
+      <div class="overlay" id="overlay"></div> 
       <div class="msg" id="msg"><img src='/static/loading.gif' />Processing...</div>  
       <!-- Fixed navbar -->
+      {% if user %}
       <nav class="navbar navbar-expand navbar-default navbar-fixed-top" style="background-color:#afd9ee">
          <div class="container">
            <div class="navbar-header">
@@ -34,6 +35,9 @@
            <div id="navbar" class="navbar-collapse collapse">
              <ul class="nav navbar-nav">
                <li class="active"><a href="/dashboard">Dashboard</a></li>
+               {%if user["group"] in ["zeus","xinge"]%}
+               <li class="active"><a href="/panel/account">Account</a></li>
+               {%end%}
                <li class="dropdown">
                  <a href="/dashboard/tasks/instance" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Panel <span class="caret"></span></a>
                  <ul class="dropdown-menu">
@@ -41,13 +45,12 @@
                    <li><a href="/orders">Query</a></li>
                    <li><a href="/panel/ding?method=all">DingDing</a></li>
                    <li><a href="/panel/server">Server</a></li>
-                   <li><a href="/panel/account">Account</a></li>
                    <li role="separator" class="divider"></li>
                    <li><a href="/panel/user">Users</a></li>
                  </ul>
                </li>
              </ul>
-             {% if user %}
+             
              <ul class="nav navbar-nav navbar-right ">
                 <li class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown"aria-haspopup="true" aria-expanded="false"><span class="glyphicon glyphicon-user"></span> {{user["name"]}}</a>

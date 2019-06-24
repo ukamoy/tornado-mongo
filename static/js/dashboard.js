@@ -422,15 +422,15 @@ function operator(obj) {
 }
 
 function task_processing(){
-    var zhezhao=document.getElementById("zhezhao"); 
+    var overlay=document.getElementById("overlay"); 
     var msg=document.getElementById("msg"); 
-    zhezhao.style.display="block"; 
+    overlay.style.display="block"; 
     msg.style.display="block"; 
 }
 function task_complete(){
-    var zhezhao=document.getElementById("zhezhao"); 
+    var overlay=document.getElementById("overlay"); 
     var msg=document.getElementById("msg"); 
-    zhezhao.style.display="none"; 
+    overlay.style.display="none"; 
     msg.style.display="none"; 
 }
 
@@ -465,39 +465,14 @@ function clear_pos(obj){
                 for(var sym in response){
                     $.post("/operator/clear_pos",{"symbol":sym,"qty":response[sym],"strategy":name})
                 }
+                alert("command sent");
             }
         }
     });
 }
 
-function account_value(hist){
-    var dom = document.getElementById("account_value");
-    var myChart = echarts.init(dom);
-    var series=[]
-    for(var coin in hist){
-        var kk ={name:coin,
-                type:'line',
-                smooth:true,
-                symbol: 'none',
-                sampling: 'average',
-                itemStyle: {
-                    color: 'rgb(255, 70, 131)'
-                },
-                areaStyle: {
-                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{
-                        offset: 0,
-                        color: 'rgb(255, 158, 68)'
-                    }, {
-                        offset: 1,
-                        color: 'rgb(255, 70, 131)'
-                    }])
-                },
-                data: hist[coin]
-                }
-        series.push(kk);
-    }
-
-    option = {
+function account_value(hist,coin,){
+    return {
         tooltip: {
             trigger: 'axis',
             position: function (pt) {
@@ -506,7 +481,7 @@ function account_value(hist){
         },
         title: {
             left: 'center',
-            text: 'Account Chart',
+            text: 'Account-'+coin,
         },
         toolbox: {
             show:false,
@@ -515,11 +490,16 @@ function account_value(hist){
                     yAxisIndex: 'none'
                 },
                 restore: {},
-                saveAsImage: {}
+                saveAsImage: {},
+                mark:{
+                    title:{
+                        mark:"MARK",
+                        download:"DOWNLOAD"
+                }}
             }
         },
         xAxis: {
-            type: 'date',
+            type: 'category',
             boundaryGap: false,
         },
         yAxis: {
@@ -543,11 +523,36 @@ function account_value(hist){
                 shadowOffsetY: 2
             }
         }],
-        series: series
+        series: [
+            {
+                name:coin,
+                type:'line',
+                color:'#00BFFF',
+                smooth:true,
+                markLine: {
+                    data: [
+                        {type: 'average', name: '平均值'}
+                    ]
+                },
+                markPoint: {
+                    symbol:"pin",
+                    data: [
+                        {type: 'max', name: '最大值'},
+                        {type: 'min', name: '最小值'}
+                    ],
+                    label:{
+                        formatter: function(value) {
+                           return value.value.toFixed(2);
+                        }
+                      },
+                    precision: 3,
+                },
+                data: hist
+            }
+        ]
     };
-    if (option && typeof option === "object") {
-        myChart.setOption(option, true);
-    }
+    ;
+    
 }
 
 
