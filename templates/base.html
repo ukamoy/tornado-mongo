@@ -1,79 +1,78 @@
 <!DOCTYPE html>
 <html>
-   <head>
-      <meta charset="UTF-8">
-      <meta http-equiv="X-UA-Compatible" content="IE=edge">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>{{ title }}</title>
-      <link rel="bookmark" type="image/x-icon" href="static/favicon.ico" mce_href="static/favicon.ico"/>
-      <link href="{{static_url('css/bootstrap.min.css')}}" rel="stylesheet">
-      <link href="{{static_url('css/bootstrap-theme.min.css')}}" rel="stylesheet">
-      <link href="{{static_url('css/theme.css')}}" rel="stylesheet">
-      <script src="{{static_url('js/jquery-3.3.1.min.js')}}" ></script>
-      <script src="{{static_url('js/bootstrap.min.js')}}"></script> 
-      <link rel="stylesheet" type="text/css" href="{{static_url('css/dashboard.css')}}" rel="stylesheet">
-      <script type="text/javascript" charset="utf-8" language="javascript" src="{{static_url('js/dashboard.js')}}"></script>
-      {% block head %}{% end %}
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{{ title }}</title>
+        <link rel="bookmark" type="image/x-icon" href="static/favicon.ico" mce_href="static/favicon.ico"/>
+        <link href="{{static_url('css/bootstrap.min.css')}}" rel="stylesheet">
+        <link href="{{static_url('css/bootstrap-theme.min.css')}}" rel="stylesheet">
+        <link href="{{static_url('css/theme.css')}}" rel="stylesheet">
+        <script src="{{static_url('js/jquery-3.3.1.min.js')}}" ></script>
+        <script src="{{static_url('js/bootstrap.min.js')}}"></script> 
+        <link rel="stylesheet" type="text/css" href="{{static_url('css/dashboard.css')}}" rel="stylesheet">
+        <script type="text/javascript" charset="utf-8" language="javascript" src="{{static_url('js/dashboard.js')}}"></script>
+        {% block head %}{% end %}
     </head>
-   <body>
-      
-      <div class="overlay" id="overlay"></div> 
-      <div class="msg" id="msg"><img src='/static/loading.gif' />Processing...</div>  
-      <!-- Fixed navbar -->
-      {% if user %}
-      <nav class="navbar navbar-expand navbar-default navbar-fixed-top" style="background-color:#afd9ee">
-         <div class="container">
-           <div class="navbar-header">
-             <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-               <span class="sr-only">Toggle navigation</span>
-               <span class="icon-bar"></span>
-               <span class="icon-bar"></span>
-               <span class="icon-bar"></span>
-             </button>
-             <a class="navbar-brand">DAYU</a>
-           </div>
-           <div id="navbar" class="navbar-collapse collapse">
-             <ul class="nav navbar-nav">
-               <li class="active"><a href="/dashboard">Dashboard</a></li>
-               {%if user["group"] in ["zeus","xinge"]%}
-               <li class="active"><a href="/panel/account">Account</a></li>
-               {%end%}
-               <li class="dropdown">
-                 <a href="/dashboard/tasks/instance" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Panel <span class="caret"></span></a>
-                 <ul class="dropdown-menu">
-                   <li class="dropdown-header">Control Panel</li>
-                   <li><a href="/orders">Query</a></li>
-                   <li><a href="/panel/ding?method=all">DingDing</a></li>
-                   <li><a href="/panel/server">Server</a></li>
-                   <li role="separator" class="divider"></li>
-                   <li><a href="/panel/user">Users</a></li>
-                 </ul>
-               </li>
-             </ul>
-             
-             <ul class="nav navbar-nav navbar-right ">
-                <li class="dropdown">
-                <a href="#" class="dropdown-toggle" data-toggle="dropdown"aria-haspopup="true" aria-expanded="false"><span class="glyphicon glyphicon-user"></span> {{user["name"]}}</a>
-                <ul class="dropdown-menu">
-                <li><a href="/user">setting</a></li>
-                <li><a href="/logout">logout</a></li>
-                </ul></li>
-              </ul>
-             {% end %}
-             
-           </div><!--/.nav-collapse -->
-         </div>
-       </nav>
-
-      <div class="container">
-        <div id="content">
-          <div class="pageContainer">
-              <div class="main">
-                  <h2 class="sub-header" style="color:#337ab7">{{ title }}</h2>
-                  {% block body %}{% end %}
-              </div>
-          </div>
+    <body>
+        <div class="overlay" id="overlay"></div> 
+        <div class="msg" id="msg"><img src='/static/loading.gif' />Processing...</div>  
+        <!-- Fixed navbar -->
+        {% if user %}
+        <nav class="navbar navbar-expand navbar-default navbar-fixed-top" style="background-color:#afd9ee">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand">DAYU</a>
+            </div>
+            <div id="navbar" class="navbar-collapse collapse">
+                <ul class="nav navbar-nav">
+                    <li class="active"><a href="/dashboard">Dashboard</a></li>
+                    {%if user["group"] in ["zeus","xinge"]%}
+                    <li class="active"><a href="/panel/account">Account</a></li>
+                    {%end%}
+                    {%if user["group"] =="zeus"%}
+                    <li class="dropdown">
+                        <a href="/dashboard/tasks/instance" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Panel <span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+                        <li class="dropdown-header">Control Panel</li>
+                        <li><a href="/orders">Query</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="/panel/ding?method=all">DingDing</a></li>
+                        <li><a href="/panel/server">Server</a></li>
+                        </ul>
+                    </li>
+                    {%end%}
+                </ul>
+                
+                <ul class="nav navbar-nav navbar-right ">
+                    <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown"aria-haspopup="true" aria-expanded="false"><span class="glyphicon glyphicon-user"></span> {{user["name"]}}</a>
+                    <ul class="dropdown-menu">
+                    <li><a href="/user">setting</a></li>
+                    <li><a href="/logout">logout</a></li>
+                    </ul></li>
+                </ul>
+            </div><!--/.nav-collapse -->
         </div>
-      </div>
-   </body>
+        </nav>
+        {% end %}
+
+        <div class="container">
+            <div id="content">
+            <div class="pageContainer">
+                <div class="main">
+                    <h2 class="sub-header" style="color:#337ab7">{{ title }}</h2>
+                    {% block body %}{% end %}
+                </div>
+            </div>
+            </div>
+        </div>
+    </body>
  </html>
