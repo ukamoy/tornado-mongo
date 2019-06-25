@@ -14,7 +14,7 @@ class dashboard(BaseHandler):
     def get(self):
         qry = {"Author":self.user["name"]}
         show = ""
-        if self.user["group"] in ["xinge","zeus"]:
+        if self.user.get("group","") in ["xinge","zeus"]:
             show="all"
             if self.get_argument("display",None):
                 qry = {}
@@ -95,7 +95,7 @@ class tasks(BaseHandler):
         else:
             return self.finish()
 
-        if self.user["group"]!="zeus":
+        if self.user.get("group","") != "zeus":
             qry.update({"Author" : self.user["name"]})
             admin = False
         

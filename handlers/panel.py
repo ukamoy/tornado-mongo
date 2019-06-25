@@ -8,8 +8,7 @@ from dayu.write_settings import update_repo, prepare_stg_files, cp_files
 class assignment(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
-        current_user = self.get_current_user()
-        if not current_user["group"] == "zeus":
+        if not self.user.get("group","") == "zeus":
             return self.redirect("/dashboard")
         task = self.db_client.query("tasks",{"task_id":args[0]})
         stg_list = list(map(lambda x: x["strategy"],task))
@@ -32,14 +31,13 @@ class assignment(BaseHandler):
         for server in servers:
             c = server_conn(server["server_ip"])
             msg = cp_files(c, server["server_name"], task_id)
-        print("deploy", f"task {task_id} assigned by file transfer\n\n {msg}")
+        dingding("deploy", f"task {task_id} assigned by file transfer\n\n {msg}")
         self.redirect(f"/deploy/assignment/{task_id}")
 
 class server(BaseHandler):
     @tornado.web.authenticated
     def get(self):
-        current_user = self.get_current_user()
-        if not current_user["group"] == "zeus":
+        if not self.user.get("group", "") == "zeus":
             return self.redirect("/dashboard")
 
         json_obj = self.db_client.query("server",{},[('_id', -1)])
@@ -103,7 +101,8 @@ class ding_info(BaseHandler):
             qry = self.get_argument("name")
             json_obj= self.db_client.query_one("ding",{"name":qry})
             self.render("ding.html", user=self.user, title = "DINGDING",data = {},edit=json_obj)
-
+    
+    @tornado.gen.coroutine
     def post(self,*args,**kwargs):
         if self.get_argument("delete",None):
             self.db_client.delete_one("ding",{"name":self.get_argument("delete")})

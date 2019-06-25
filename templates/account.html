@@ -14,11 +14,10 @@ function account_chart(obj){
       error:error,
       success:function(response){
          if(response){
-            var ss = "";
+            var ss="";
             for(var coin in response){
                ss+="<div id='account_value_"+coin+"' style='min-width: 300px; height: 250px; margin: 0 auto'></div>";
             }
-            
             document.getElementById('stat').innerHTML = ss;
             for(var coin in response){
                 var dom = document.getElementById("account_value_"+coin);
@@ -51,6 +50,8 @@ function account_chart(obj){
       <option value = "{{item}}">{{item}}</option>
    {%end%}
 </select>
-<div id="showResult"></div>
+<div id="loading" class='table-responsive' style='margin-top: 10px'>
+   <div id="showResult"></div>
+</div>
 <span id=stat></span>
 {%end%}

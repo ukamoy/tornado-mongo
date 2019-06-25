@@ -443,6 +443,7 @@ function beforeSend(XMLHttpRequest){
 }
 function complete(XMLHttpRequest, textStatus){
     $("#showResult").remove();
+    $("#loading").append("<div id='showResult'></div>");
 }
 function clear_pos(obj){
     var r = check_submission();

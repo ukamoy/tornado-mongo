@@ -312,8 +312,8 @@ class clear_pos(BaseHandler):
 class public(BaseHandler):
     @tornado.gen.coroutine
     def get(self):
-        print(self.request.arguments)
         member = self.db_client.query_one("user", {"auth": self.get_cookie('auth')})
+        print("public get:",self.request.arguments, member.get("name","not member"))
         if member:
             if self.get_argument("strategy", None):
                 name = self.get_argument("strategy", None)
