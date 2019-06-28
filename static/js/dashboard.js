@@ -570,7 +570,7 @@ function running_hist(hist){
         },
         title: {
             left: 'center',
-            text: 'Strategy Operation',
+            text: 'Strategy Operation(0 : halt, 1 : launch)',
         },
         toolbox: {
             show:false,

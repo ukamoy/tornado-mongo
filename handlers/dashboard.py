@@ -148,7 +148,7 @@ class chart(BaseHandler):
         self.render("chart.html", user=self.user, title = f"{args[0]} Chart")
     def post(self,*args,**kwargs):
         strategy = args[0]
-        json_obj = self.db_client.query("orders",{"strategy":strategy})
+        json_obj = self.db_client.query("orders",{"strategy":filter_name(strategy)})
         hist = self.db_client.query("operation",{"name":strategy})
         stat = get_chart(strategy, json_obj, hist)
         self.finish(json.dumps(stat))
@@ -213,5 +213,5 @@ handlers = [
     (r"/dashboard/tasks/([a-zA-Z0-9]+)", tasks), 
     (r"/pos", posHandler),
     (r"/orders", orders),
-    (r"/chart/([a-zA-Z0-9]+)", chart),
+    (r"/chart/([a-zA-Z0-9_-]+)", chart),
 ]
