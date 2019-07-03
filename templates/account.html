@@ -3,18 +3,19 @@
 <script src="{{static_url('js/echarts.min.js')}}" charset="UTF-8"></script>
 <script>
 function account_chart(obj){
-   var s = obj.value;
+   var account = obj.value;
+   var ss="";
    $.ajax({
       url:"/panel/account",
       type: "POST",
       dataType:"json",
-      data: {"query":s},
+      data: {"query":account},
       beforeSend:beforeSend,
       complete:complete,
       error:error,
       success:function(response){
          if(response){
-            var ss="";
+            
             for(var coin in response){
                ss+="<div id='account_value_"+coin+"' style='min-width: 300px; height: 250px; margin: 0 auto'></div>";
             }

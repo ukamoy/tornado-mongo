@@ -27,33 +27,44 @@
     <div class="table-responsive" style="margin-top: 10px">
         <table cellpadding="0" cellspacing="0" border="0" class="table-1" id="strategy_list">
             <thead>
-                <tr>{%if show=="mine"%}
-                    &nbsp;{%else%}
+                <tr>
                     <th><input type="checkbox" class="checkall" name="checkall"></th>
-                    {%end%}
                     <th>Name</th>
                     <th>Server</th>
-                    <th>Position as at <div id="time" style="display:inline"></div></th>
+                    {%if show=="mine"%}
+                    <th>Author</th>
+                    {%end%}
+                    <th><div style="display:inline-table;width:50%;">Position as at <div id="time" style="display:inline"></div></div>
+                        <div style="display:inline-table;width:10%;">
+                            <span class="label label-success">LONG</span>
+                        </div><div style="display:inline-table;width:10%;">
+                            <span class="label label-danger">SHORT</span>
+                        </div><div style="display:inline-table;width:10%;">
+                            <span class="label label-default">PENDING</span>
+                        </div></th>
                     <th>Profile</th>
                     <th>Update Time</th>
                 </tr>
             </thead>
             <tbody>
                 {% for d in data %}
-                <tr>{%if show=="mine"%}
-                    &nbsp;{%else%}
+                <tr>
                     <td data-label="check"><input type="checkbox" value="{{d['name']}}" name="cc"></td>
-                    {%end%}
                     <td data-label="Name"><a href="/dashboard/strategy/{{d['name']}}">{{d["name"]}}</a></td>
                     <td data-label="Server">{{d["server"]}}</td>
+                    {%if show=="mine"%}
+                    <td data-label="Author">{{d["Author"]}}</td>
+                    {%end%}
                     <td data-label="Postion">
                         {%for sym in d['tradePos']%}
                         <div style="display:inline-table;width:60%;">
-                            <span style="font-size:12px; width:80%;">{{sym}}</span>
-                        </div><div style="display:inline-table;width:15%;">
-                            <span class="label label-success" id="long-{{d['alias']}}-{{sym}}" text-align="right">{{d['tradePos'][sym][0]}}</span>
-                        </div><div style="display:inline-table;width:15%;">
-                            <span class="label label-danger" id="short-{{d['alias']}}-{{sym}}" text-align="right">{{d['tradePos'][sym][1]}}</span>
+                            <span style="font-size:12px; width:60%;">{{sym}}</span>
+                        </div><div style="display:inline-table;width:10%;">
+                            <span class="label label-success" id="long-{{d['alias']}}-{{sym}}">{{d['tradePos'][sym][0]}}</span>
+                        </div><div style="display:inline-table;width:10%;">
+                            <span class="label label-danger" id="short-{{d['alias']}}-{{sym}}">{{d['tradePos'][sym][1]}}</span>
+                        </div><div style="display:inline-table;width:10%;">
+                            <span class="label label-default" id="open-{{d['alias']}}-{{sym}}">{{d['open_order'][sym]}}</span>
                         </div>
                         {%end%}
                     </td>
@@ -67,12 +78,15 @@
             </tbody>
         </table>
     </div>
-    {%if show=="mine"%}
-    &nbsp;{%else%}
+    
     <div class="row">
+    {%if show!="mine"%}
         <a href="javascript:;" class="btn btn-xs btn-primary" onclick="create_instance()">Create Instance</a>
-    </div>
+    {%else%}
+        <a href="javascript:;" class="btn btn-xs btn-primary" disabled="disabled">Create Instance</a>
     {%end%}
+    </div>
+    
 {% else %}
     no data
 {% end %}

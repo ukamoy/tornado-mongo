@@ -216,6 +216,7 @@ class mainipulator(BaseHandler):
             for ex in json_obj:
                 ac_dict.update({ex["name"]:[ex["keys"],ex["symbols"]]})
             self.finish(ac_dict)
+
 class clear_pos(BaseHandler):
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):

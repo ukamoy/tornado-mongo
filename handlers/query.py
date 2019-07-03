@@ -58,6 +58,15 @@ def query_okex_spot_price(instrument):
     r = requests.get(url,timeout = 10).json()
     return float(r["last"])
 
+def query_open_orders(account_info, symbol):
+    path = f'/api/futures/v3/orders/{symbol}'
+    params={"state":"6","instrument_id":symbol,"limit":100}
+    path = f"{path}?{urlencode(params)}"
+    headers = okex_sign(account_info,"GET",path,params)
+    url = f"{OKEX_REST_HOST}{path}"
+    r = requests.get(url, headers = headers, timeout =10)
+    return r.json()
+
 class rotate_query(object):
     executor = ThreadPoolExecutor(10)
     def __init__(self):
@@ -180,6 +189,7 @@ class rotate_query(object):
     @tornado.gen.coroutine
     def okex_orders(self, active_ac):
         order_list =[]
+        open_orders = []
         for vt_ac,symbols in active_ac.items():
             for symbol in list(symbols):
                 for state in ["-1","2"]:
@@ -189,6 +199,12 @@ class rotate_query(object):
                         result = list(map(lambda x: dict(x,**{"strategy":x["client_oid"].split("FUTU")[0]}),result))
                         result = list(map(lambda x: dict(x,**{"instrument_id":symbol}), result))
                         order_list += result
+                r = self.query(vt_ac, arb_symbol(symbol), "6")
+                if r.get("result",False):
+                    result = list(map(lambda x: dict(x,**{"account":vt_ac}),r["order_info"]))
+                    result = list(map(lambda x: dict(x,**{"strategy":x["client_oid"].split("FUTU")[0]}),result))
+                    result = list(map(lambda x: dict(x,**{"instrument_id":symbol}), result))
+                    open_orders += result
 
         if order_list:
             order_list=list(map(lambda x:dict(x, **{"datetime":convertDatetime(x["timestamp"])}),order_list))
@@ -202,8 +218,23 @@ class rotate_query(object):
                 success.append(order)
             except:
                 pass
-        print("find:",len(order_list),"insert:",len(success))
+        open_order_map ={}
+        if open_orders:
+            for order in open_orders:
+                key = f"open-{order['strategy']}-{order['instrument_id']}:{order['account']}"
+                size = open_order_map.get(key, 0)
+                open_order_map.update({key:size + int(order["size"])})
+            for k, v in open_order_map.items():
+                t, alias,sym = k.split("-")
+                if alias:
+                    self.db_client.update_one(
+                        "strategy",
+                        {"alias",alias},{"open_order":{sym:v}}
+                    )
+                    
+        print("find:",len(order_list),"insert:",len(success),"opens:",len(open_orders))
         url = "http://localhost:9999/pos"
+        self.new_pos_dict.update(open_order_map)
         body = urlencode(self.new_pos_dict)
         client = tornado.httpclient.AsyncHTTPClient()
         try:
@@ -235,7 +266,7 @@ class rotate_query(object):
 
     def update_pos(self, order):
         strategy,sym,ac = order["strategy"],order["instrument_id"],order["account"]
-        direction,vol = order["type"],float(order["filled_qty"])
+        direction,vol = order["type"],int(order["filled_qty"])
         vt_ac = f"{sym}:{ac}"
         key = f"{strategy}-{vt_ac}"
         pos_long,pos_short = self.pos_dict.get(key,[0,0])
@@ -347,7 +378,7 @@ class position_span(object):
 def process_orders(order_data, pos_dict):
     for idx, order in order_data.iterrows():
         order_price = float(order['price_avg'])
-        order_qty = float(order['filled_qty'])
+        order_qty = int(order['filled_qty'])
 
         pos_dict.fee += float(order['fee'])
         pos_dict.contract_value = float(order["contract_val"])

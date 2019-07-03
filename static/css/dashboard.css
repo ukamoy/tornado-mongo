@@ -181,7 +181,7 @@ body {
     color:red;
 }
 
-@media screen and (max-width:600px){
+@media screen and (max-width:768px){
     table {
         border: 0;
     }

@@ -346,13 +346,31 @@ function old_operator(obj) {
     });
 }
 
-function operate_all(obj){
+function operate_multi(obj){
     var r = check_submission();
         if(r==false){
             return;
         }
     alert("xiang de mei");
+
+    //var result = gether_checkbox();
+    //if(result.length==0){
+    //    alert("please pick strategy");
+    //}else{
+    //    var mark=[];
+    //    for(var stg in result){
+    //        if("server"+result[stg]["name"] != "idle"){
+    //            mark.push(result[stg]['name']);
+    //        }
+    //    }
+    //    if(mark.length==0){
+    //        alert("ss");
+     //   }else{
+    //        alert(mark+": strategy already in running");
+    //    }
+    //};
 }
+
 function operator(obj) {
     var s = obj.name.split("-");
     var method = s[0];
