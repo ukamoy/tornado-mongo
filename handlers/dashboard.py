@@ -1,8 +1,9 @@
 import tornado.websocket
 import tornado.web
 from handlers import BaseHandler
-from handlers.query import rotate_query, get_chart
+from handlers.query import get_chart
 from dayu.util import filter_name, convertDatetime, dingding
+from dayu.exchange import OKEX
 from dayu.write_settings import update_repo, prepare_stg_files
 import os,json,traceback,re
 from bson import ObjectId
@@ -170,12 +171,15 @@ class orders(BaseHandler):
     @tornado.gen.coroutine
     def post(self):
         result = []
-        t = rotate_query()
-        r = t.query(
-            f"OKEX_{self.get_argument('ac_name')}", 
-            self.get_argument("symbol"), 
-            self.get_argument("state"), 
-            self.get_argument("oid"))
+        account_info = self.db_client.query_one("account",{"name":self.get_argument('ac_name')})
+        symbol = self.get_argument("symbol")
+        oid = self.get_argument("oid")
+        gateway = OKEX(account_info)
+        if oid:
+            r = gateway.query_futures_monoOrder(symbol, oid)
+        else:
+            r = gateway.query_futures_orders(symbol, self.get_argument("state"))
+        
         if r:
             if r.get("result", None):
                 result=list(map(lambda x:dict(x, **{"datetime":convertDatetime(x["timestamp"])}),r["order_info"]))

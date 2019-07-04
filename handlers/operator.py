@@ -1,7 +1,7 @@
 import tornado.web
 from handlers import BaseHandler
-from handlers.query import generateSignature, query_price, okex_sign, arb_symbol, OKEX_REST_HOST
 from dayu.util import server_conn, get_server, filter_name, dingding
+from dayu.exchange import OKEX
 from config import working_path
 import re
 import os
@@ -222,93 +222,36 @@ class clear_pos(BaseHandler):
     def post(self,*args,**kwargs):
         current_user = self.get_current_user()
         print("clearpos post",args, self.request.arguments, "body:", self.request.body_arguments)
-        d=self.get_argument("symbol").split("_")
-        qty=self.get_argument("qty")
-        stg=filter_name(self.get_argument("strategy"))
-        sym,ac,direction = d
-        instrument = arb_symbol(sym.split(":")[0])
+        sym,ac,direction = self.get_argument("symbol").split("_")
+        qty = self.get_argument("qty")
+        stg = filter_name(self.get_argument("strategy"))
+        contract_map, contract_reverse = OKEX.query_futures_instruments()
+        instrument = contract_map[sym.split(":")[0]]
 
         account_info = self.db_client.query_one("account",{"name":ac})
-        open_orders = self.query_open_orders(account_info,instrument)  
-        r=open_orders.result()
-        if r.get("result",False):
-            orders = r["order_info"]
-            need_to_cancel = list(map(lambda x:x["client_oid"] if x["client_oid"].split("FUTU")[0]==stg else None, r["order_info"]))
+        gateway = OKEX(account_info)
+        open_orders = gateway.query_futures_orders(instrument,"6")
+        print(open_orders)
+        if open_orders.get("result",False):
+            orders = open_orders["order_info"]
+            need_to_cancel = list(map(lambda x:x["client_oid"] if x["client_oid"].split("FUTU")[0]==stg else None, open_orders["order_info"]))
         len_cancel_order = len(need_to_cancel)
-        oids = self.cancel_order(account_info, instrument, (list(set(need_to_cancel))))
-        if len(oids.result())>0:
+        for oid in list(set(need_to_cancel)):
+            r = gateway.cancel_futures_order(instrument, oid)
+            if r.get("result", False):
+                need_to_cancel.remove(oid)
+        if len(need_to_cancel)>0:
             dingding("INSTANCE CONTROL",f"{stg}, error in cancelling orders")
         else:
-            r = self.close_position(account_info, stg, instrument, direction, qty)
-            print(r)
+            order_type = "3" if direction == "LONG" else "4"
+            futures_price = OKEX.query_futures_price(instrument)
+            price = f"{futures_price/1.02:0.3f}" if direction == "LONG" else f"{futures_price*1.02:0.3f}"
+            oid = f"{stg}FUTUDSB{datetime.now().strftime('%y%m%d%H%M')}"
+            r = gateway.send_futures_order(oid, order_type, instrument, price, qty)
             if r.get("result",False):
-                dingding("INSTANCE CONTROL",f"> CLEAR POSITION: {stg}\n\n {current_user['name']} cancelled {len_cancel_order} open orders and closed postion")
+                print("INSTANCE CONTROL",f"> CLEAR POSITION: {stg}\n\n {current_user['name']} cancelled {len_cancel_order} open orders and closed postion")
             else:
-                dingding("INSTANCE CONTROL",f"{stg}, error in close position:{r}")
-
-    def close_position(self, account_info, strategy, instrument, direction, qty):
-        data={
-            "client_oid": f"{strategy}FUTUDSB{datetime.now().strftime('%y%m%d%H%M')}",
-            "instrument_id":instrument,
-            "size":str(int(qty)),
-            "match_price":"0",
-            "order_type":"0",
-            "leverage":str(account_info["future_leverage"])
-        }
-        if direction=="LONG":
-            data.update({"type":"3", "price":f"{query_price(instrument)/1.02:0.3f}"})
-        else:
-            data.update({"type":"4", "price":f"{query_price(instrument)*1.02:0.3f}"})
-        path = f'/api/futures/v3/order'
-        path = f"{path}?{urlencode(data)}"
-        
-        timestamp = f"{datetime.utcnow().isoformat()[:-3]}Z"
-        data=json.dumps(data)
-        msg = f"{timestamp}POST{path}{data}"
-        signature = generateSignature(msg, account_info["secretkey"])
-        headers = {
-            'Content-Type': 'application/json',
-            'OK-ACCESS-KEY': account_info["apikey"],
-            'OK-ACCESS-SIGN': signature,
-            'OK-ACCESS-TIMESTAMP': timestamp,
-            'OK-ACCESS-PASSPHRASE': account_info["passphrase"]
-        }
-        #headers = okex_sign(account_info,"POST",path,data)
-        print(headers,path)
-        url = f"{OKEX_REST_HOST}{path}"
-        r = requests.post(url, headers = headers, data=data, timeout =10)
-        return r.json()
-    @tornado.gen.coroutine
-    def cancel_order(self, account_info, symbol, oids):
-        for oid in list(oids):
-            if oid:
-                timestamp = f"{datetime.utcnow().isoformat()[:-3]}Z"
-                path = f'/api/futures/v3/cancel_order/{symbol}/{oid}'
-                msg = f"{timestamp}POST{path}"
-                signature = generateSignature(msg, account_info["secretkey"])
-                headers = {
-                    'Content-Type': 'application/json',
-                    'OK-ACCESS-KEY': account_info["apikey"],
-                    'OK-ACCESS-SIGN': signature,
-                    'OK-ACCESS-TIMESTAMP': timestamp,
-                    'OK-ACCESS-PASSPHRASE': account_info["passphrase"]
-                }
-                url = f"{OKEX_REST_HOST}{path}"
-                r = requests.post(url, headers = headers, timeout =10).json()
-                if r.get("result",False):
-                    oids.remove(oid)
-            else:
-                oids.remove(oid)
-        return oids
-    @tornado.gen.coroutine
-    def query_open_orders(self, account_info, symbol):
-        path = f'/api/futures/v3/orders/{symbol}'
-        params={"state":"6","instrument_id":symbol,"limit":100}
-        path = f"{path}?{urlencode(params)}"
-        headers=okex_sign(account_info,"GET",path,params)
-        url = f"{OKEX_REST_HOST}{path}"
-        r = requests.get(url, headers = headers, timeout =10)
-        return r.json()
+                print("INSTANCE CONTROL",f"{stg}, error in close position:{r}")
 
 class public(BaseHandler):
     @tornado.gen.coroutine

@@ -5,6 +5,7 @@ from dayu.db_conn import db_client
 import os,json,traceback,re
 from datetime import datetime
 from dayu.util import convertDatetime, dingding, get_server
+from dayu.exchange import OKEX
 from urllib.parse import urlencode
 import hmac
 import base64
@@ -14,58 +15,7 @@ from time import sleep
 import pandas as pd
 from config import working_path
 
-OKEX_REST_HOST = "https://www.okex.com"
 IMAGE = "daocloud.io/xingetouzi/vnpy-fxdayu:v1.1.20"
-
-def generateSignature(msg, apiSecret):
-    """OKEX签名V3"""
-    mac = hmac.new(bytes(apiSecret, encoding='utf-8'), bytes(msg,encoding='utf-8'), digestmod='sha256')
-    d= mac.digest()
-    return base64.b64encode(d)
-
-def okex_sign(account_info,method,path,params=None):
-    body = json.dumps(params) if method=="POST" else ""
-    timestamp = f"{datetime.utcnow().isoformat()[:-3]}Z"
-    msg = f"{timestamp}{method}{path}{body}"
-    signature = generateSignature(msg, account_info["secretkey"])
-    return {
-        'Content-Type': 'application/json',
-        'OK-ACCESS-KEY': account_info["apikey"],
-        'OK-ACCESS-SIGN': signature,
-        'OK-ACCESS-TIMESTAMP': timestamp,
-        'OK-ACCESS-PASSPHRASE': account_info["passphrase"]
-    }
-
-def arb_symbol(symbol,real=True):
-    res=requests.get(f"{OKEX_REST_HOST}/api/futures/v3/instruments").json()
-    contract_map={}
-    for r in res:
-        vert=f"{r['underlying_index']}-{r['alias'].replace('_','-')}"
-        contract_map[str.upper(vert)]=r["instrument_id"]
-        contract_reverse={v:k for k,v in contract_map.items()}
-    if real:
-        return contract_map.get(symbol,symbol) 
-    else:
-        return contract_reverse.get(symbol,symbol) 
-
-# 获取剩余持仓结算价格
-def query_price(instrument):
-    url = f'{OKEX_REST_HOST}/api/futures/v3/instruments/{instrument}/ticker'
-    r = requests.get(url,timeout = 10).json()
-    return float(r["last"])
-def query_okex_spot_price(instrument):
-    url = f'{OKEX_REST_HOST}/api/spot/v3/instruments/{instrument}/ticker'
-    r = requests.get(url,timeout = 10).json()
-    return float(r["last"])
-
-def query_open_orders(account_info, symbol):
-    path = f'/api/futures/v3/orders/{symbol}'
-    params={"state":"6","instrument_id":symbol,"limit":100}
-    path = f"{path}?{urlencode(params)}"
-    headers = okex_sign(account_info,"GET",path,params)
-    url = f"{OKEX_REST_HOST}{path}"
-    r = requests.get(url, headers = headers, timeout =10)
-    return r.json()
 
 class rotate_query(object):
     executor = ThreadPoolExecutor(10)
@@ -73,11 +23,12 @@ class rotate_query(object):
         self.db_client = db_client()
         self.pos_dict={}
         self.new_pos_dict={}
+        self.key_chain = {}
         self.mapping = {"1":"开多","2":"开空","3":"平多","4":"平空"}
 
     @tornado.gen.coroutine
     def prepare(self):
-        symbols=set()
+        symbols = set()
         coins = set()
         active_ac={}
         json_obj = self.db_client.query("strategy",{"server":{"$ne":"idle"}})
@@ -86,25 +37,34 @@ class rotate_query(object):
             for sym,pos in stg["tradePos"].items():
                 symbols.add(sym)
                 self.pos_dict.update({f"{stg['alias']}-{sym}":pos})
+
         for sym in list(symbols):
             s,vt_ac = sym.split(":")
-            ss = active_ac.get(vt_ac,set())
+            ss = active_ac.get(vt_ac, set())
             ss.add(s)
             coins.add(s)
             active_ac.update({vt_ac:ss})
         coins = list(set(map(lambda x: x.split("-")[0], list(coins))))
+        keys = list(map(lambda x: x.split("_")[1], list(active_ac.keys())))
+        keys = self.db_client.query("account",{"name":{"$in":keys}})
+        for key in keys:
+            self.key_chain.update({f"OKEX_{key['name']}":key})
         self.okex_orders(active_ac)
-        self.okex_accounts(active_ac,coins)
+        self.okex_accounts(active_ac, coins)
         self.auto_launch()
         #self.test()
 
-    def test(self):
-        for i in range(10):
-            url = "http://localhost:9999/test"
-            body=urlencode({"test":i})
-            client = tornado.httpclient.AsyncHTTPClient()
-            client.fetch(url,method='POST',body=body)
-    
+    # def test(self):
+    #     for i in range(10):
+    #         url = "http://localhost:9999/test"
+    #         body=urlencode({"test":i})
+    #         client = tornado.httpclient.AsyncHTTPClient()
+    #         client.fetch(url,method='POST',body=body)
+    # @run_on_executor
+    # def test2(self,server_name,stg_name,task_id):
+    #     sleep(8)
+    #     print("888888")
+
     @tornado.gen.coroutine
     def auto_launch(self):
         not_run = self.db_client.query("tasks",{"status":0,"server":"idle"})
@@ -135,12 +95,7 @@ class rotate_query(object):
                         break
                 #yield self.test2(serv,instance["strategy"],instance["task_id"])
                 yield self.launch_process(serv,instance["strategy"],instance["task_id"])
-    
-    # @run_on_executor
-    # def test2(self,server_name,stg_name,task_id):
-    #     sleep(8)
-    #     print("888888")
-
+ 
     @run_on_executor
     def launch_process(self, server_name,stg_name,task_id):
         server = get_server(server_name)
@@ -165,41 +120,33 @@ class rotate_query(object):
     def okex_accounts(self, active_ac, coins):
         today = datetime.today().strftime("%Y%m%d")
         for coin in coins:
-            r = query_okex_spot_price(f"{coin}-USDT")
+            r = OKEX.query_spot_price(f"{coin}-USDT")
             self.db_client.update_one("coin_value",{"date":today,"coin":coin},{"date":today,"coin":coin,"value":r})
 
         for vt_ac,symbols in active_ac.items():
             d={}
             for symbol in list(symbols):
-                r = self.query_account(vt_ac,symbol[:3])
+                gateway = OKEX(self.key_chain[vt_ac])
+                r = gateway.query_futures_account(symbol[:3])
                 d.update({symbol[:3]:float(r["equity"])})
             self.db_client.update_one("account_value",{"date":today,"account":vt_ac},{"date":today,"account":vt_ac,"FUTURE":d})
-
-    def query_account(self, account_name, symbol):
-        account_info = self.find_key(account_name)
-        path = f'/api/futures/v3/accounts/{symbol}'
-        params={}
-        # params={"state":state,"instrument_id":symbol,"limit":100}
-        # path = f"{path}?{urlencode(params)}"
-        headers = okex_sign(account_info,"GET",path,params)
-        url = f"{OKEX_REST_HOST}{path}"
-        r = requests.get(url, headers = headers, timeout =10)
-        return r.json()
 
     @tornado.gen.coroutine
     def okex_orders(self, active_ac):
         order_list =[]
         open_orders = []
+        contract_map, contract_reverse = OKEX.query_futures_instruments()
         for vt_ac,symbols in active_ac.items():
+            gateway = OKEX(self.key_chain[vt_ac])
             for symbol in list(symbols):
                 for state in ["-1","2"]:
-                    r = self.query(vt_ac, arb_symbol(symbol), state)
+                    r = gateway.query_futures_orders(contract_map[symbol],state)
                     if r.get("result",False):
                         result = list(map(lambda x: dict(x,**{"account":vt_ac}),r["order_info"]))
                         result = list(map(lambda x: dict(x,**{"strategy":x["client_oid"].split("FUTU")[0]}),result))
                         result = list(map(lambda x: dict(x,**{"instrument_id":symbol}), result))
                         order_list += result
-                r = self.query(vt_ac, arb_symbol(symbol), "6")
+                r = gateway.query_futures_orders(contract_map[symbol], "6")
                 if r.get("result",False):
                     result = list(map(lambda x: dict(x,**{"account":vt_ac}),r["order_info"]))
                     result = list(map(lambda x: dict(x,**{"strategy":x["client_oid"].split("FUTU")[0]}),result))
@@ -225,14 +172,15 @@ class rotate_query(object):
                 size = open_order_map.get(key, 0)
                 open_order_map.update({key:size + int(order["size"])})
             for k, v in open_order_map.items():
-                t, alias,sym = k.split("-")
+                print("openooooooooooooooooooooooo",k)
+                alias = k.split("-")[1]
                 if alias:
                     self.db_client.update_one(
                         "strategy",
-                        {"alias",alias},{"open_order":{sym:v}}
+                        {"alias",alias},{"open_order":{k.replace(f"open-{alias}-",""):v}}
                     )
                     
-        print("find:",len(order_list),"insert:",len(success),"opens:",len(open_orders))
+        print("find:",len(order_list),"insert:",len(success),"order pending:",len(open_orders))
         url = "http://localhost:9999/pos"
         self.new_pos_dict.update(open_order_map)
         body = urlencode(self.new_pos_dict)
@@ -290,27 +238,6 @@ class rotate_query(object):
                 "strategy",
                 {"alias":strategy},
                 {"tradePos":{vt_ac:[pos_long,pos_short]}})
-    
-
-    def find_key(self,account_name):
-        ex,ac = account_name.split("_")
-        return self.db_client.query_one("account",{"name":ac})
-
-    def query(self,account_name,symbol,state="",oid=""):
-        account_info = self.find_key(account_name)
-        params={}
-        if oid and not state:
-            path = f'/api/futures/v3/orders/{symbol}/{oid}'
-        elif state and not oid:
-            path = f'/api/futures/v3/orders/{symbol}'
-            params={"state":state,"instrument_id":symbol,"limit":100}
-            path = f"{path}?{urlencode(params)}"
-        else:
-            return {}
-        headers=okex_sign(account_info,"GET",path,params)
-        url = f"{OKEX_REST_HOST}{path}"
-        r = requests.get(url, headers = headers, timeout =10)
-        return r.json()
 
 class position_span(object):
     def __init__(self, instrument):
@@ -420,14 +347,13 @@ def get_chart(strategy, json_obj, hist):
         data = df.sort_values(by = "datetime", ascending = True)
         data["vtSymbol"] = data["instrument_id"]+":"+data["account"]
         instruments = list(set(data["vtSymbol"]))
-
+        contract_map, contract_reverse = OKEX.query_futures_instruments()
         for instrument in instruments:
             per_coin_data = data[data["vtSymbol"] == instrument]
             pos_dict = position_span(instrument)
             process_orders(per_coin_data, pos_dict)
-            
-            sym = arb_symbol(instrument.split(":")[0])
-            pos_dict.calculate_position_profit(query_price(sym))
+            symbol = contract_map[instrument.split(":")[0]]
+            pos_dict.calculate_position_profit(OKEX.query_futures_price(symbol))
 
             # 缓存策略统计
             result[instrument] = pos_dict
