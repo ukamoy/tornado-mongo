@@ -1,17 +1,16 @@
 import requests
 import json
 import tornado
-from dayu.db_conn import db_client
-import os,json,traceback,re
+import os, traceback, re
 from datetime import datetime
+from time import sleep
+
 from dayu.util import convertDatetime, dingding, get_server
+from dayu.db_conn import db_client
 from dayu.exchange import OKEX
 from urllib.parse import urlencode
-import hmac
-import base64
 from tornado.concurrent import run_on_executor
 from concurrent.futures import ThreadPoolExecutor
-from time import sleep
 import pandas as pd
 from config import working_path
 
@@ -24,33 +23,37 @@ class rotate_query(object):
         self.pos_dict={}
         self.new_pos_dict={}
         self.key_chain = {}
+        self.open_order_cache = {}
         self.mapping = {"1":"开多","2":"开空","3":"平多","4":"平空"}
+        self.prepare()
 
     @tornado.gen.coroutine
     def prepare(self):
         symbols = set()
         coins = set()
         active_ac={}
-        json_obj = self.db_client.query("strategy",{"server":{"$ne":"idle"}})
+        json_obj = self.db_client.query("strategy", {"server": {"$ne":"idle"}})
 
         for stg in json_obj:
-            for sym,pos in stg["tradePos"].items():
+            for sym, pos in stg["tradePos"].items():
                 symbols.add(sym)
                 self.pos_dict.update({f"{stg['alias']}-{sym}":pos})
-
         for sym in list(symbols):
-            s,vt_ac = sym.split(":")
+            s, vt_ac = sym.split(":")
             ss = active_ac.get(vt_ac, set())
             ss.add(s)
             coins.add(s)
-            active_ac.update({vt_ac:ss})
+            active_ac.update({vt_ac: ss})
         coins = list(set(map(lambda x: x.split("-")[0], list(coins))))
         keys = list(map(lambda x: x.split("_")[1], list(active_ac.keys())))
-        keys = self.db_client.query("account",{"name":{"$in":keys}})
+        keys = self.db_client.query("account", {"name":{"$in":keys}})
         for key in keys:
-            self.key_chain.update({f"OKEX_{key['name']}":key})
+            self.key_chain.update({f"OKEX_{key['name']}": key})
+        #print(111,datetime.now())
         self.okex_orders(active_ac)
+        #print(222,datetime.now())
         self.okex_accounts(active_ac, coins)
+        #print(333,datetime.now())
         self.auto_launch()
         #self.test()
 
@@ -59,27 +62,27 @@ class rotate_query(object):
     #         url = "http://localhost:9999/test"
     #         body=urlencode({"test":i})
     #         client = tornado.httpclient.AsyncHTTPClient()
-    #         client.fetch(url,method='POST',body=body)
+    #         client.fetch(url, method='POST', body=body)
     # @run_on_executor
-    # def test2(self,server_name,stg_name,task_id):
+    # def test2(self, server_name, stg_name, task_id):
     #     sleep(8)
     #     print("888888")
 
     @tornado.gen.coroutine
     def auto_launch(self):
-        not_run = self.db_client.query("tasks",{"status":0,"server":"idle"})
+        not_run = self.db_client.query("tasks", {"status":0, "server":"idle"})
         if not_run:
-            stg_list = list(map(lambda x: x["strategy"],not_run))
-            dingding("INSTANCE",f"ATTEMPT AUTO-LAUNCH: {stg_list}")
-            servers = self.db_client.query("server",{"type":"trading"})
+            stg_list = list(map(lambda x: x["strategy"], not_run))
+            dingding("INSTANCE", f"> ATTEMPT AUTO-LAUNCH: {stg_list}")
+            servers = self.db_client.query("server", {"type":"trading"})
             servers_list = list(map(lambda x: x["server_name"],servers))
-            running_instance = self.db_client.query("tasks",{"status":1})
-            running_serv= list(map(lambda x: x["server"],running_instance))
+            running_instance = self.db_client.query("tasks", {"status":1})
+            running_serv= list(map(lambda x: x["server"], running_instance))
 
             for instance in not_run:
                 serv=None
                 for serv_r in list(set(sorted(running_serv))):
-                    print("find existing:",instance["strategy"],serv_r,running_serv.count(serv_r))
+                    print("find existing:", instance["strategy"], serv_r, running_serv.count(serv_r))
                     if running_serv.count(serv_r)<7:
                         serv=serv_r
                         running_serv.append(serv)
@@ -91,13 +94,13 @@ class rotate_query(object):
                         serv=f[0]
                         running_serv.append(serv)
                     else:
-                        dingding("INSTANCE","Auto-launch failed, NEED NEW SERVER")
+                        dingding("INSTANCE","> Auto-launch failed, NEED NEW SERVER")
                         break
                 #yield self.test2(serv,instance["strategy"],instance["task_id"])
                 yield self.launch_process(serv,instance["strategy"],instance["task_id"])
  
     @run_on_executor
-    def launch_process(self, server_name,stg_name,task_id):
+    def launch_process(self, server_name, stg_name, task_id):
         server = get_server(server_name)
         if server:
             container = server.get(stg_name)
@@ -107,100 +110,112 @@ class rotate_query(object):
                     stg_name, # 策略名
                     f"{working_path}/{task_id}/{stg_name}"
                 )
-                print("create container:",r)
+                print("create container:", r)
             
             status = server.start(stg_name)
             if status == "running":
                 now = int(datetime.now().timestamp()*1000)
-                self.db_client.update_one("tasks",{"strategy":stg_name,"task_id":task_id},{"server":server_name,"status":1})
-                self.db_client.update_one("strategy",{"name":stg_name},{"server":server_name})
-                self.db_client.insert_one("operation",{"name":stg_name,"op":1,"timestamp":now})
+                self.db_client.update_one("tasks", {"strategy":stg_name, "task_id":task_id}, {"server":server_name,"status":1})
+                self.db_client.update_one("strategy", {"name":stg_name}, {"server":server_name})
+                self.db_client.insert_one("operation", {"name":stg_name, "op":1, "timestamp":now})
     
     @tornado.gen.coroutine
     def okex_accounts(self, active_ac, coins):
         today = datetime.today().strftime("%Y%m%d")
         for coin in coins:
             r = OKEX.query_spot_price(f"{coin}-USDT")
-            self.db_client.update_one("coin_value",{"date":today,"coin":coin},{"date":today,"coin":coin,"value":r})
+            self.db_client.update_one("coin_value", {"date":today,"coin":coin}, {"date":today,"coin":coin,"value":r})
 
-        for vt_ac,symbols in active_ac.items():
+        for vt_ac, symbols in active_ac.items():
             d={}
             for symbol in list(symbols):
                 gateway = OKEX(self.key_chain[vt_ac])
                 r = gateway.query_futures_account(symbol[:3])
                 d.update({symbol[:3]:float(r["equity"])})
-            self.db_client.update_one("account_value",{"date":today,"account":vt_ac},{"date":today,"account":vt_ac,"FUTURE":d})
+            self.db_client.update_one("account_value", {"date":today,"account":vt_ac}, {"date":today,"account":vt_ac,"FUTURE":d})
 
     @tornado.gen.coroutine
     def okex_orders(self, active_ac):
         order_list =[]
         open_orders = []
         contract_map, contract_reverse = OKEX.query_futures_instruments()
-        for vt_ac,symbols in active_ac.items():
+        for vt_ac, symbols in active_ac.items():
             gateway = OKEX(self.key_chain[vt_ac])
             for symbol in list(symbols):
-                for state in ["-1","2"]:
+                for state in ["-1", "2"]:
                     r = gateway.query_futures_orders(contract_map[symbol],state)
-                    if r.get("result",False):
-                        result = list(map(lambda x: dict(x,**{"account":vt_ac}),r["order_info"]))
-                        result = list(map(lambda x: dict(x,**{"strategy":x["client_oid"].split("FUTU")[0]}),result))
-                        result = list(map(lambda x: dict(x,**{"instrument_id":symbol}), result))
+                    if r.get("result", False):
+                        result = list(map(lambda x: dict(x,**{"account": vt_ac}), r["order_info"]))
+                        result = list(map(lambda x: dict(x,**{"strategy": x["client_oid"].split("FUTU")[0]}), result))
+                        result = list(map(lambda x: dict(x,**{"instrument_id": symbol}), result))
                         order_list += result
                 r = gateway.query_futures_orders(contract_map[symbol], "6")
-                if r.get("result",False):
-                    result = list(map(lambda x: dict(x,**{"account":vt_ac}),r["order_info"]))
-                    result = list(map(lambda x: dict(x,**{"strategy":x["client_oid"].split("FUTU")[0]}),result))
-                    result = list(map(lambda x: dict(x,**{"instrument_id":symbol}), result))
+                if r.get("result", False):
+                    result = list(map(lambda x: dict(x,**{"account": vt_ac}), r["order_info"]))
+                    result = list(map(lambda x: dict(x,**{"strategy": x["client_oid"].split("FUTU")[0]}), result))
+                    result = list(map(lambda x: dict(x,**{"instrument_id": symbol}), result))
                     open_orders += result
 
         if order_list:
-            order_list=list(map(lambda x:dict(x, **{"datetime":convertDatetime(x["timestamp"])}),order_list))
+            order_list=list(map(lambda x:dict(x, **{"datetime": convertDatetime(x["timestamp"])}), order_list))
         success=[]
         for order in order_list:
             if str(order["filled_qty"]) == "0":
                 continue
             try:
-                self.db_client.insert_one("orders",order)
+                self.db_client.insert_one("orders", order)
                 self.update_pos(order)
                 success.append(order)
             except:
                 pass
+
         open_order_map ={}
+        print("open_order_cache-:" , self.open_order_cache)
         if open_orders:
             for order in open_orders:
                 key = f"open-{order['strategy']}-{order['instrument_id']}:{order['account']}"
-                size = open_order_map.get(key, 0)
-                open_order_map.update({key:size + int(order["size"])})
-            for k, v in open_order_map.items():
-                print("openooooooooooooooooooooooo",k)
-                alias = k.split("-")[1]
-                if alias:
-                    self.db_client.update_one(
-                        "strategy",
-                        {"alias",alias},{"open_order":{k.replace(f"open-{alias}-",""):v}}
-                    )
+                qty = open_order_map.get(key, 0)
+                open_order_map.update({key: (qty + int(order["size"]))})
+                print(open_order_map)
+
+            if open_order_map != self.open_order_cache:
+                self.open_order_cache, pre = open_order_map, self.open_order_cache
+                for open_order, count in pre.items():
+                    if open_order not in open_order_map.keys():
+                        open_order_map.update({open_order : 0})
+
+                for k, v in open_order_map.items():
+                    alias = k.split("-")[1]
+                    if alias:
+                        self.db_client.update_one(
+                            "strategy",
+                            {"alias":alias},{"open_order":{k.replace(f"open-{alias}-",""):v}}
+                        )
+        else:
+            for open_order, count in self.open_order_cache.items():
+                open_order_map.update({open_order : 0})
+        self.new_pos_dict.update(open_order_map)
                     
         print("find:",len(order_list),"insert:",len(success),"order pending:",len(open_orders))
         url = "http://localhost:9999/pos"
-        self.new_pos_dict.update(open_order_map)
         body = urlencode(self.new_pos_dict)
         client = tornado.httpclient.AsyncHTTPClient()
         try:
-            client.fetch(url,method='POST',body=body)
-            self.new_pos_dict={}
+            client.fetch(url, method = 'POST', body = body)
+            self.new_pos_dict = {}
         except Exception as e:
             print("client.fetch failed. reason:",e)
 
         if success:
-            msg={}
+            msg = {}
             for od in success:
                 stg=od["strategy"] if order["strategy"] else "None"
-                ac = msg.get(stg,{})
-                msg[stg]=ac
+                ac = msg.get(stg, {})
+                msg[stg] = ac
                 txt = ac.get(od["account"],[])
                 ding = f"> {od['instrument_id']}, {self.mapping[od['type']]}, {od['filled_qty']} @ {od['price_avg']}\n\n"
                 txt.append(ding)
-                msg[stg][od['account']]=txt
+                msg[stg][od['account']] = txt
             ding = ""
             for stg,detail in msg.items():
                 ding+= f"### {stg}\n"
@@ -210,25 +225,25 @@ class rotate_query(object):
                         ding += txt
             ding += f"\n {datetime.now().strftime('%y%m%d %H:%M:%S')}"
 
-            dingding("DASHBOARD",ding)
+            dingding("DASHBOARD", ding)
 
     def update_pos(self, order):
-        strategy,sym,ac = order["strategy"],order["instrument_id"],order["account"]
-        direction,vol = order["type"],int(order["filled_qty"])
+        strategy, sym, ac = order["strategy"], order["instrument_id"], order["account"]
+        direction, vol = order["type"], int(order["filled_qty"])
         vt_ac = f"{sym}:{ac}"
         key = f"{strategy}-{vt_ac}"
-        pos_long,pos_short = self.pos_dict.get(key,[0,0])
+        pos_long,pos_short = self.pos_dict.get(key, [0, 0])
 
-        if direction =="1":
+        if direction == "1":
             pos_long += vol
             self.new_pos_dict.update({f"long-{key}":pos_long})
-        elif direction =="2":
+        elif direction == "2":
             pos_short += vol
             self.new_pos_dict.update({f"short-{key}":pos_short})
-        elif direction =="3":
+        elif direction == "3":
             pos_long -= vol
             self.new_pos_dict.update({f"long-{key}":pos_long})
-        elif direction =="4":
+        elif direction == "4":
             pos_short -= vol
             self.new_pos_dict.update({f"short-{key}":pos_short})
 
@@ -237,7 +252,7 @@ class rotate_query(object):
             self.db_client.update_one(
                 "strategy",
                 {"alias":strategy},
-                {"tradePos":{vt_ac:[pos_long,pos_short]}})
+                {"tradePos":{vt_ac: [pos_long,pos_short]}})
 
 class position_span(object):
     def __init__(self, instrument):
