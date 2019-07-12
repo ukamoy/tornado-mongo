@@ -6,8 +6,6 @@ from config import working_path
 import re
 import os
 import json
-import requests
-from urllib.parse import urlencode
 from time import sleep,time
 from datetime import datetime
 from tornado.concurrent import run_on_executor
@@ -216,6 +214,9 @@ class mainipulator(BaseHandler):
             for ex in json_obj:
                 ac_dict.update({ex["name"]:[ex["keys"],ex["symbols"]]})
             self.finish(ac_dict)
+        elif self.get_argument("deleteStrategy",None):
+            name = self.get_argument("deleteStrategy",None)
+            self.db_client.delete_one("strategy",{"name":name})
 
 class clear_pos(BaseHandler):
     @tornado.gen.coroutine
@@ -249,9 +250,9 @@ class clear_pos(BaseHandler):
             oid = f"{stg}FUTUDSB{datetime.now().strftime('%y%m%d%H%M')}"
             r = gateway.send_futures_order(oid, order_type, instrument, price, qty)
             if r.get("result",False):
-                print("INSTANCE CONTROL",f"> CLEAR POSITION: {stg}\n\n {current_user['name']} cancelled {len_cancel_order} open orders and closed postion")
+                dingding("INSTANCE CONTROL",f"> CLEAR POSITION: {stg}\n\n {current_user['name']} cancelled {len_cancel_order} open orders and closed postion")
             else:
-                print("INSTANCE CONTROL",f"{stg}, error in close position:{r}")
+                dingding("INSTANCE CONTROL",f"{stg}, error in close position:{r}")
 
 class public(BaseHandler):
     @tornado.gen.coroutine

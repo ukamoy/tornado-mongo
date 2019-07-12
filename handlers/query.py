@@ -110,7 +110,7 @@ class rotate_query(object):
                     stg_name, # 策略名
                     f"{working_path}/{task_id}/{stg_name}"
                 )
-                print("create container:", r)
+                print(f"create container for {stg_name}:", r)
             
             status = server.start(stg_name)
             if status == "running":
@@ -176,7 +176,7 @@ class rotate_query(object):
                 key = f"open-{order['strategy']}-{order['instrument_id']}:{order['account']}"
                 qty = open_order_map.get(key, 0)
                 open_order_map.update({key: (qty + int(order["size"]))})
-                print(open_order_map)
+            print(open_order_map)
 
             if open_order_map != self.open_order_cache:
                 self.open_order_cache, pre = open_order_map, self.open_order_cache
@@ -191,9 +191,18 @@ class rotate_query(object):
                             "strategy",
                             {"alias":alias},{"open_order":{k.replace(f"open-{alias}-",""):v}}
                         )
+            else:
+                open_order_map ={}
         else:
             for open_order, count in self.open_order_cache.items():
                 open_order_map.update({open_order : 0})
+                alias = open_order.split("-")[1]
+                if alias:
+                    self.db_client.update_one(
+                        "strategy",
+                        {"alias":alias},{"open_order":{open_order.replace(f"open-{alias}-",""):0}}
+                    )
+            self.open_order_cache = {}    
         self.new_pos_dict.update(open_order_map)
                     
         print("find:",len(order_list),"insert:",len(success),"order pending:",len(open_orders))

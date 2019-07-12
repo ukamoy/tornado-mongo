@@ -2,10 +2,8 @@ import tornado
 from dayu.db_conn import db_client
 from dayu.user import Member
 from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor
 
 class BaseHandler(tornado.web.RequestHandler):
-    executor = ThreadPoolExecutor(10)
     @tornado.gen.coroutine
     def initialize(self):
         self.db_client = db_client()

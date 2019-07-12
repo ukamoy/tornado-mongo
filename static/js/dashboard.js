@@ -351,24 +351,62 @@ function operate_multi(obj){
         if(r==false){
             return;
         }
-    alert("xiang de mei");
-
-    //var result = gether_checkbox();
-    //if(result.length==0){
-    //    alert("please pick strategy");
-    //}else{
-    //    var mark=[];
-    //    for(var stg in result){
-    //        if("server"+result[stg]["name"] != "idle"){
-    //            mark.push(result[stg]['name']);
-    //        }
-    //    }
-    //    if(mark.length==0){
-    //        alert("ss");
-     //   }else{
-    //        alert(mark+": strategy already in running");
-    //    }
-    //};
+    var method = obj.name.split("_")[0];
+    var result = gether_checkbox();
+    var msg = [];
+    if(result.length==0){
+        alert("please pick strategy");
+    }else{
+        for(item in result){
+            res = result[item]["name"].split("-")
+            name=res[0];
+            task_id=res[1];
+            server=res[2];
+        
+            $.ajax({
+                url:"/operator",
+                type: "POST",
+                dataType:"json",
+                data: {"method":method, "name":name, "task_id":task_id,"server":server},
+                beforeSend:task_processing,
+                complete:task_complete,
+                error:null,
+                async:false,
+                success:function(response){
+                    if(response){
+                        if ("error" in response){
+                            return alert(response["error"]);
+                        }else{
+                            var result = response["result"];
+                            if(result){
+                                if (method=="halt"){
+                                    var button = document.getElementsByName("halt-"+name+"-"+task_id);
+                                    $(button).attr("disabled","disabled");
+                                    $(button).css("pointer-events","none");
+                                    var new_obj = document.getElementsByName("launch-"+name+"-"+task_id);
+                                    $(new_obj).attr("disabled",false);
+                                    $(new_obj).css("pointer-events","auto");
+                                    msg.push(name);
+        
+                                }else if(method=="delete"){
+                                    var button = document.getElementsByName("delete-"+name+"-"+task_id);
+                                    var tr = $(button)[0].parentNode.parentNode;
+                                    tr.parentNode.removeChild(tr);
+                                    // alert("Moved to Archiver");
+                                };
+        
+                            }else{
+                                alert(name+" "+method+" operation failed");
+                            }
+                        }
+                    }else{
+                        alert(name+" "+method+" operation failed");
+                    }
+                },
+            });
+        };
+        if(method=="halt"){alert(msg+", halted");};
+    }
 }
 
 function operator(obj) {
@@ -785,11 +823,20 @@ function makeSortable(table) {
 function check_pos(pos){
     var form = document.getElementById("strategy_form")
     if(pos=="0"){
-        alert("ok");
+        //alert("ok");
         form.submit();
     }else{
         return alert(pos);
     }
+}
+function delete_stg(obj){
+    var r = check_submission();
+        if(r==false){
+            return;
+        }
+    var name = obj.name;
+    $.get("/dy",{"deleteStrategy":name});
+    window.location.href="/";
 }
 // function update_waitlist(){
 	  // record all checkbox val

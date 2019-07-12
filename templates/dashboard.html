@@ -80,7 +80,7 @@
     </div>
     
     <div class="row">
-    {%if show!="mine"%}
+    {%if show!="mine" or user["group"] =="zeus"%}
         <a href="javascript:;" class="btn btn-xs btn-primary" onclick="create_instance()">Create Instance</a>
     {%else%}
         <a href="javascript:;" class="btn btn-xs btn-primary" disabled="disabled">Create Instance</a>

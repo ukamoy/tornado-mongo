@@ -46,6 +46,7 @@ class strategy(BaseHandler):
         sym_list=[]
         strategy["tradeSymbolList"] =[]
         strategy["tradePos"] = {}
+        strategy["open_order"] ={}
 
         for sym,ex,ac in zip(strategy["assist_symbols"],strategy["assist_symbols_ex"],strategy["assist_symbols_ac"]):
             sym_list.append(f"{sym}:{ex}_{ac}")
@@ -53,6 +54,7 @@ class strategy(BaseHandler):
             symbol = f"{sym}:{ex}_{ac}"
             strategy["tradeSymbolList"].append(symbol)
             strategy["tradePos"].update({symbol:[0,0]})
+            strategy["open_order"].update({symbol:0})
 
         for symbol in list(sym_list):
             if symbol in strategy["tradeSymbolList"]:

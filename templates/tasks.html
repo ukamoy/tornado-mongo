@@ -28,8 +28,8 @@
             </thead>
             <tbody>
                 {% for d in data %}
-                <tr>
-                    <td data-label="check"><input type="checkbox" value="{{d['strategy']}}-{{d['task_id']}}" name="cc"></td>
+                <tr id="{{d['strategy']}}">
+                    <td data-label="check"><input type="checkbox" value="{{d['strategy']}}-{{d['task_id']}}-{{d['server']}}" name="cc"></td>
                     <td data-label="Task ID"><a href="/deploy/assignment/{{d['task_id']}}">{{d["task_id"]}}</a></td>
                     {%if admin%}
                     <td data-label="Author">{{d["Author"]}}</td>
@@ -78,8 +78,8 @@
             </tbody>
         </table>
         {%if title == "INSTANCE" %}
-        <a class="btn btn-xs btn-warning" href="javascript:;" onclick="operate_multi(this)" name="launch_multi">Launch Selected</a>
-        <a class="btn btn-xs btn-danger" href="javascript:;" onclick="operate_multi(this)" name="halt_multi">Halt Selected</a>
+        <a class="btn btn-xs btn-warning" href="javascript:;" onclick="operate_multi(this)" name="halt_multi">Halt Selected</a>
+        <a class="btn btn-xs btn-danger" href="javascript:;" onclick="operate_multi(this)" name="delete_multi">Delete Selected</a>
         {%end%}
 
     </div>

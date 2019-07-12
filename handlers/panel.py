@@ -2,7 +2,6 @@ import tornado.web
 from handlers import BaseHandler
 from dayu.util import mongo_obj,server_conn, dingding
 import os,json,traceback,re
-from bson import ObjectId
 from dayu.write_settings import update_repo, prepare_stg_files, cp_files
 
 class assignment(BaseHandler):

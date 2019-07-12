@@ -46,7 +46,8 @@ function load(){
             <label>Strategy Name</label>
                 <span class="field">
                 {% if data %}
-                    <span class="form-control">{{data['name']}}</span>
+                    <span class="form-control" style="width:300px">{{data['name']}}</span>
+                    <a class ="btn btn-sm btn-danger" href="javascript:;" onclick="delete_stg(this)" name="{{data['name']}}">Delete Strategy</a>
                     <input type="hidden" name="name" value="{{data['name']}}">
                 {% else %}
                     <input type="text" name="name" class="form-control" placeholder="Strategy Name (Max Length = 13)" onblur="check_name()" required>
