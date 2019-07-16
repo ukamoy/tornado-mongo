@@ -40,11 +40,11 @@ class BITMEX(object):
             "api-signature": signature }
 
     # private query -------------------------------
-    def query_futures_orders(self, symbol, open_status = False):
+    def query_futures_orders(self, symbol, status = ""):
         path = f'/order'
         params = {"symbol": symbol , "count": "100", "reverse": False}
-        if open_status:
-            params["filter"] = json.dumps({"open": True})
+        if status:
+            params["filter"] = json.dumps({"ordStatus": status})
         url, headers = self.bitmex_sign("GET", path, params)
         r = requests.get(url, headers = headers, timeout = 10)
         return r.json()
