@@ -19,6 +19,7 @@
                     <th>Author</th>
                     {%end%}
                     <th>Strategy</th>
+                    <th>Account</th>
                     <th>Server</th>
                     <th>Operator</th>
                     {%if title=="INSTANCE"%}
@@ -35,6 +36,9 @@
                     <td data-label="Author">{{d["Author"]}}</td>
                     {%end%}
                     <td data-label="Strategy">{{d["strategy"]}}</td>
+                    <td data-label="Account">
+                        {%for ac in d['account']%}{{ac}}{%end%}
+                    </td>
                     <td data-label="Server" class="center">
                         {%if serv%}
                         <select id="server-{{d['strategy']}}" class="form-control">

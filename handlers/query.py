@@ -14,14 +14,13 @@ from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 from config import working_path
 
-IMAGE = "daocloud.io/xingetouzi/vnpy-fxdayu:v1.1.20"
-
+#IMAGE = "daocloud.io/xingetouzi/vnpy-fxdayu:v1.1.20"
+IMAGE = "daocloud.io/xingetouzi/vnpy-fxdayu:v1.1.21-20190729"
 class rotate_query(object):
     executor = ThreadPoolExecutor(15)
     def __init__(self):
         self.db_client = db_client()
         self.pos_dict = {}
-        self.success_orders = []
         self.new_pos_dict = {}
         self.key_chain = {}
         self.open_order_cache = {}
@@ -30,6 +29,28 @@ class rotate_query(object):
 
     @tornado.gen.coroutine
     def prepare(self):
+        self.auto_launch()
+
+        active_ac = yield self.key_maker()
+        filled_orders = []
+        for ex, ac in active_ac.items():
+            coins = sum(list(ac.values()),[])
+                
+            if ex=="OKEX" and ac:
+                filled_orders += yield self.okex_orders(ac, coins)
+                self.okex_accounts(ac, coins)
+
+            elif ex == "BITMEX" and ac:
+                filled_orders += yield self.bitmex_orders(ac, coins)
+                self.bitmex_accounts(ac, coins)
+        
+        if filled_orders:
+            success_order = yield self.process_filled_orders(filled_orders)
+        self.send_pos()
+        self.dingding_pos(success_order)
+
+    @run_on_executor
+    def key_maker(self):
         json_obj = self.db_client.query("strategy", {"server": {"$ne":"idle"}})
         
         symbols = set()
@@ -53,26 +74,8 @@ class rotate_query(object):
             
         for key in keys:
             self.key_chain.update({f"{key['exchange']}_{key['name']}": key})
+        return active_ac
 
-        filled_orders = []
-        for ex, ac in active_ac.items():
-            coins = sum(list(ac.values()),[])
-                
-            if ex=="OKEX" and ac:
-                filled_orders += yield self.okex_orders(ac)
-                coins = list(set(map(lambda x: x.split("-")[0], coins)))
-                self.okex_accounts(ac, coins)
-
-            elif ex == "BITMEX" and ac:
-                filled_orders += yield self.bitmex_orders(ac)
-                self.bitmex_accounts(ac, coins)
-
-        self.auto_launch()
-        if filled_orders:
-            self.process_filled_orders(filled_orders)
-        self.send_pos()
-        self.dingding_pos()
-    
     @run_on_executor
     def test(self):
         for i in range(10):
@@ -138,18 +141,21 @@ class rotate_query(object):
     @run_on_executor
     def okex_accounts(self, active_ac, coins):
         today = datetime.today().strftime("%Y%m%d")
+        coins = list(set(map(lambda x: x.split("-")[0], coins)))
         for coin in coins:
             r = OKEX.query_spot_price(f"{coin}-USDT")
             self.db_client.update_one("coin_value", {"date": today, "coin": coin}, {"date" :today, "coin": coin, "value": r})
-
+        
         for vt_ac, symbols in active_ac.items():
             d={}
             for symbol in symbols:
                 gateway = OKEX(self.key_chain[vt_ac])
                 r = gateway.query_futures_account(symbol[:3])
                 d.update({symbol[:3]: float(r["equity"])})
+
             self.db_client.update_one("account_value", {"date": today, "account": vt_ac}, {"date": today, "account": vt_ac, "FUTURE": d})
-    
+        
+
     @run_on_executor
     def bitmex_accounts(self, active_ac, coins):
         today = datetime.today().strftime("%Y%m%d")
@@ -176,10 +182,28 @@ class rotate_query(object):
         except Exception as e:
             print("client.fetch failed. reason:",e)
 
-    def dingding_pos(self):
-        if self.success_orders:
+    def get_position_profit(self, coin_value):
+        for key, pos in self.pos_dict.items():
+            strategy = key.split("-")[0]
+            symbol = key.replace(f"{strategy}-","")
+            if (pos[0]+pos[1]):
+                json_obj = self.db_client.query("orders", {"strategy": strategy})
+                stat = get_chart(strategy, json_obj)
+                info = stat["detail"][symbol]
+                long_v, short_v = info["position_profit_long"],info["position_profit_short"]
+            else:
+                long_v = short_v = 0
+
+            self.db_client.update_one(
+                        "strategy",
+                        {"alias": strategy}, {"profit_rate": {symbol: [long_v,short_v]}}
+                    )
+            self.new_pos_dict.update({f"{key}-long":long_v,f"{key}-short":short_v})
+
+    def dingding_pos(self, success_orders):
+        if success_orders:
             msg = {}
-            for od in self.success_orders:
+            for od in success_orders:
                 stg = od["strategy"] if od["strategy"] else "None"
                 ac = msg.get(stg, {})
                 msg[stg] = ac
@@ -197,7 +221,6 @@ class rotate_query(object):
                         ding += txt
             ding += f"\n {datetime.now().strftime('%y%m%d %H:%M:%S')}"
             dingding("DASHBOARD", ding)
-            self.success_orders = []
     
     def process_bitmex_orders(self, orders, account, symbol):
         return list(map(lambda x: dict(x,**{
@@ -220,7 +243,7 @@ class rotate_query(object):
             }), orders))
 
     @run_on_executor
-    def bitmex_orders(self, active_ac):
+    def bitmex_orders(self, active_ac, coins):
         filled_orders =[]
         open_orders = []
         for vt_ac, symbols in active_ac.items():
@@ -233,11 +256,9 @@ class rotate_query(object):
                 r = gateway.query_futures_orders(symbol, "New")
                 if r:
                     open_orders += self.process_okex_orders(r, vt_ac, symbol)
-        if filled_orders:
-            self.process_filled_orders(filled_orders)
+                    
         self.process_open_orders(open_orders)
-        print(datetime.now(), "BITMEX find:", len(filled_orders), "insert:", len(self.success_orders), "order pending:", len(open_orders))
-        self.dingding_pos()
+        return filled_orders
 
     def process_okex_orders(self, orders, account, symbol):
         return list(map(lambda x: dict(x,**{
@@ -247,10 +268,17 @@ class rotate_query(object):
             }), orders))
 
     @run_on_executor
-    def okex_orders(self, active_ac):
+    def okex_orders(self, active_ac, coins):
         filled_orders =[]
         open_orders = []
         contract_map, contract_reverse = OKEX.query_futures_instruments()
+
+        coin_v = {}
+        for symbol in coins:
+            v = OKEX.query_futures_price(contract_map[symbol])
+            coin_v.update({symbol:v})
+        
+
         for vt_ac, symbols in active_ac.items():
             gateway = OKEX(self.key_chain[vt_ac])
             for symbol in list(symbols):
@@ -263,10 +291,11 @@ class rotate_query(object):
                     open_orders += self.process_okex_orders(r["order_info"], vt_ac, symbol)
         
         self.process_open_orders(open_orders)
-        print(datetime.now(), "OKEX find:", len(filled_orders), "insert:", len(self.success_orders), "order pending:", len(open_orders))
+        self.get_position_profit(coin_v)
         return filled_orders
-        
+    @run_on_executor
     def process_filled_orders(self, filled_orders):
+        success_orders = []
         filled_orders = list(map(lambda x:dict(x, **{"datetime": convertDatetime(x["timestamp"])}), filled_orders))
         for order in filled_orders:
             if str(order["filled_qty"]) == "0":
@@ -274,9 +303,11 @@ class rotate_query(object):
             try:
                 self.db_client.insert_one("orders", order)
                 self.update_pos(order)
-                self.success_orders.append(order)
+                success_orders.append(order)
             except:
                 pass
+        print(datetime.now(), "OKEX find:", len(filled_orders), "insert:", len(success_orders))#, "order pending:", len(open_orders))
+        return success_orders
 
     def process_open_orders(self, open_orders):
         open_order_map ={}
@@ -370,6 +401,8 @@ class position_span(object):
         self.long_qty = 0
         self.short_price = 0
         self.short_qty = 0
+        self.position_profit_long = 0
+        self.position_profit_short = 0
 
         self.profit_loss = 0
         self.fee = 0
@@ -378,7 +411,9 @@ class position_span(object):
         self.winning_count = 0
         self.winning_pnl = 0
         self.position_profit = 0
+        
         self.instrument = instrument
+        self.leverage = 1
         self.missing_open = []
         self.pnl_list = []
         self.qty_list = []
@@ -419,11 +454,12 @@ class position_span(object):
 
     def calculate_position_profit(self, price):
         # 持仓盈亏
-        if self.long_qty:
-            self.position_profit += ( ( self.contract_value / self.long_price - self.contract_value / price ) * self.long_qty )
+        if self.long_qty: 
+            profit = ( ( self.contract_value / self.long_price - self.contract_value / price ) * self.long_qty )
+            self.position_profit_long = profit / (self.contract_value * self.long_qty / self.long_price)
         if self.short_qty:
-            self.position_profit += ( ( self.contract_value / price - self.contract_value / self.short_price ) * self.short_qty )
-
+            profit = ( ( self.contract_value / price - self.contract_value / self.short_price ) * self.short_qty )
+            self.position_profit_short = profit / (self.contract_value * self.short_qty / self.short_price / self.leverage)
 
 # 订单处理
 def process_orders(order_data, pos_dict):
@@ -433,6 +469,7 @@ def process_orders(order_data, pos_dict):
 
         pos_dict.fee += float(order['fee'])
         pos_dict.contract_value = float(order["contract_val"])
+        pos_dict.leverage = float(order["leverage"])
         
         if str(order['type']) == "1":
             pos_dict.add_up_buy_orders(order_price, order_qty)
@@ -455,7 +492,7 @@ def process_orders(order_data, pos_dict):
         pos_dict.pnl_list.append([t, pos_dict.profit_loss])
         pos_dict.qty_list.append([t, order_qty])
 
-def get_chart(strategy, json_obj, hist):
+def get_chart(strategy, json_obj, hist=[]):
     df = pd.DataFrame(json_obj)
     result = {}
     statistics = {}
@@ -464,7 +501,6 @@ def get_chart(strategy, json_obj, hist):
     winning_pnl = 0
     total_count = 0
     total_pnl = 0
-    
     if df.size > 0:
         del df["_id"]
         data = df.sort_values(by = "datetime", ascending = True)
@@ -487,8 +523,9 @@ def get_chart(strategy, json_obj, hist):
                 "trade_count" : position.trade_count,
                 "profit_loss" : position.profit_loss,
                 "fee" : position.fee,
-                "position_profit" : position.position_profit,
-                "net_profit" : position.profit_loss + position.fee + position.position_profit,
+                "position_profit_long" : f"{position.position_profit_long: 0.2%}" if position.position_profit_long else 0,
+                "position_profit_short" : f"{position.position_profit_short: 0.2%}" if position.position_profit_short else 0,
+                "net_profit" : position.profit_loss + position.fee + position.position_profit_long + position.position_profit_short,
                 "holding_long" : position.long_qty,
                 "holding_short" : position.short_qty,
                 "missing_open" : position.missing_open,

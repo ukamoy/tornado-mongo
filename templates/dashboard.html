@@ -8,10 +8,6 @@
         item=document.getElementById(d._name)
         item.innerHTML=d._val;
     };
-    window.onload=function(){
-        var table=document.getElementsByTagName("table")[0];
-        makeSortable(table);
-    }
 </script>
 {% end %}
 {% block body %} 
@@ -29,21 +25,17 @@
             <thead>
                 <tr>
                     <th><input type="checkbox" class="checkall" name="checkall"></th>
-                    <th>Name</th>
-                    <th>Server</th>
+                    <th id="ss">Name</th>
+                    <th id="ss">Server</th>
                     {%if show=="mine"%}
-                    <th>Author</th>
+                    <th id="ss">Author</th>
                     {%end%}
-                    <th><div style="display:inline-table;width:50%;">Position as at <div id="time" style="display:inline"></div></div>
-                        <div style="display:inline-table;width:10%;">
-                            <span class="label label-success">LONG</span>
-                        </div><div style="display:inline-table;width:10%;">
-                            <span class="label label-danger">SHORT</span>
-                        </div><div style="display:inline-table;width:10%;">
-                            <span class="label label-default">OPEN</span>
-                        </div></th>
+                    <th id="ss">Trading symbols at 
+                        <div id="time" style="display:inline"></div></th>
+                    <th><span class="label label-xs label-default">OPEN</span></th>
+                    <th><span class="label label-xs label-success">LONG</span></th>
+                    <th><span class="label label-xs label-danger">SHORT</span></th>
                     <th>Profile</th>
-                    <th>Update Time</th>
                 </tr>
             </thead>
             <tbody>
@@ -55,24 +47,36 @@
                     {%if show=="mine"%}
                     <td data-label="Author">{{d["Author"]}}</td>
                     {%end%}
-                    <td data-label="Postion">
+                    <td data-label="Symbols">
                         {%for sym in d['tradePos']%}
-                        <div style="display:inline-table;width:60%;">
-                            <span style="font-size:12px; width:60%;">{{sym}}</span>
-                        </div><div style="display:inline-table;width:10%;">
-                            <span class="label label-success" id="long-{{d['alias']}}-{{sym}}">{{d['tradePos'][sym][0]}}</span>
-                        </div><div style="display:inline-table;width:10%;">
-                            <span class="label label-danger" id="short-{{d['alias']}}-{{sym}}">{{d['tradePos'][sym][1]}}</span>
-                        </div><div style="display:inline-table;width:10%;">
-                            <span class="label label-default" id="open-{{d['alias']}}-{{sym}}">{{d['open_order'][sym]}}</span>
-                        </div>
+                        <span style="font-size:10px;">{{sym}}</span></div><br>
                         {%end%}
                     </td>
+                    <td data-label="Open Orders">{%for sym in d['tradePos']%}
+                            <div style="display:inline-table;">
+                            <span class="label label-xs label-default" id="open-{{d['alias']}}-{{sym}}">
+                            {{d['open_order'][sym]}}</span></div><br>
+                            {%end%}</td>
+                    <td data-label="Long Position">{%for sym in d['tradePos']%}
+                        <div style="display:inline-table;">
+                        <span class="label label-xs label-success" id="long-{{d['alias']}}-{{sym}}">
+                        {{d['tradePos'][sym][0]}}</span></div>
+                        <div style="display:inline-table;">
+                            <span class="label label-xs label-success" id="{{d['alias']}}-{{sym}}-long">
+                                    {{d['profit_rate'][sym][0]}}</span></div><br>
+                        {%end%}</td>
+                    <td data-label="Short Position">{%for sym in d['tradePos']%}
+                        <div style="display:inline-table;">
+                        <span class="label label-xs label-danger" id="short-{{d['alias']}}-{{sym}}">
+                            {{d['tradePos'][sym][1]}}</span></div>
+                        <div style="display:inline-table;">
+                            <span class="label label-xs label-danger" id="{{d['alias']}}-{{sym}}-short">
+                                    {{d['profit_rate'][sym][1]}}</span></div><br>
+                        {%end%}</td>
                     <td data-label="Profile"><a class="btn btn-xs btn-primary" href="/chart/{{d['name']}}" target="_blank">Chart</a>
                         &nbsp;<a class="btn btn-xs btn-primary" href="http://149.28.78.5:5601/app/kibana#/discover?_g=()&_a=(columns:!(_source),filters:!(('$state':(store:appState),meta:(alias:!n,disabled:!f,index:'0c5c9850-7e27-11e9-95ef-03925e1df000',key:message,negate:!f,params:!({{d['name']}}),type:phrases,value:{{d['name']}}),query:(bool:(minimum_should_match:1,should:!((match_phrase:(message:{{d['name']}}))))))),index:'0c5c9850-7e27-11e9-95ef-03925e1df000',interval:auto,query:(language:lucene,query:''),sort:!('@timestamp',desc))" target="_blank">Log</a>
                         &nbsp;<a class="btn btn-xs btn-primary" href="/orders?name={{d['alias']}}" target="_blank">Orders</a>
                     </td>
-                    <td data-label="Update" class="center">{{d["updatetime"]}}</td>
                 </tr>
                 {% end %}
             </tbody>

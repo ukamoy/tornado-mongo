@@ -20,7 +20,7 @@ $(document).ready(
             var data = response["detail"];
             for(var ins in data){
                var item = data[ins];
-               ss+="<ul>"+ins+"<li>trade_count: "+item["trade_count"]+"</li>"+"<li>profit_loss: "+item["profit_loss"]+"</li>"+"<li>fee: "+item["fee"]+"</li>"+"<li>position_profit: "+item["position_profit"]+"</li>"+"<li>net_profit: "+item["net_profit"]+"</li>"+"<li>holding: long: "+item["holding_long"]+"  short: "+item["holding_short"]+"</li>";
+               ss+="<ul>"+ins+"<li>trade_count: "+item["trade_count"]+"</li>"+"<li>profit_loss: "+item["profit_loss"]+"</li>"+"<li>fee: "+item["fee"]+"</li>"+"<li>position_profit_rate: long:"+item["position_profit_long"]+" short:"+item["position_profit_short"]+"</li>"+"<li>net_profit: "+item["net_profit"]+"</li>"+"<li>holding: long: "+item["holding_long"]+"  short: "+item["holding_short"]+"</li>";
                if(item["missing_open"]!=""){
                   ss+="<li>missing_open:</li>";
                   for(var mo in item["missing_open"]){

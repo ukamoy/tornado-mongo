@@ -8,7 +8,7 @@ $(function(){
 			checkbox.prop("checked", false);
 		}
 	});
-
+    
 	$("input[name='confirm_task']").click(function(){
 		var result = gether_table();
 		$("#hidTD").val(JSON.stringify(result));
@@ -30,6 +30,10 @@ $(function(){
         }
     });
 })
+window.onload=function(){
+    var table=document.getElementsByTagName("table")[0];
+    makeSortable(table);
+}
 function GoBackward(){
     window.history.back();
     }
@@ -781,6 +785,7 @@ function performance(instrument,pnl,qty){
 //查找表格的<th>元素，让它们可单击
 function makeSortable(table) {
     var headers=table.getElementsByTagName("th");
+    // $(headers).append("&nbsp;<i class='glyphicon glyphicon-sort'></i>");
     for(var i=0;i<headers.length;i++){
         (function(n){
             var flag=false;

@@ -104,17 +104,20 @@ class tasks(BaseHandler):
         
         json_obj = self.db_client.query("tasks",qry,[('_id', -1)])
         self.render("tasks.html", user=self.user, title = title, data = json_obj, serv = serv_name,admin=admin)
+    
     @tornado.web.authenticated
     def post(self, *args, **kwargs):
         task_id = datetime.now().strftime("%Y%m%d%H%M%S%f")[:-3]
         stg_list = list(self.request.arguments.keys())
-        for strategy in stg_list:
+        json_obj = self.db_client.query("strategy",{"name":{"$in":stg_list}})
+        for strategy in json_obj:
             args = {
-                "task_id" : task_id,
-                "Author" : self.user["name"],
-                "status" : 0,
-                "server" : "idle",
-                "strategy" : strategy
+                "task_id": task_id,
+                "Author": self.user["name"],
+                "status": 0,
+                "server": "idle",
+                "strategy": strategy["name"],
+                "account": strategy["trade_symbols_ac"]
                 }
             self.db_client.insert_one("tasks", args)
 
@@ -149,6 +152,7 @@ class chart(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
         self.render("chart.html", user=self.user, title = f"{args[0]} Chart")
+    @tornado.gen.coroutine
     def post(self,*args,**kwargs):
         strategy = args[0]
         json_obj = self.db_client.query("orders",{"strategy":filter_name(strategy)})
