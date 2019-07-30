@@ -148,6 +148,7 @@ class tasks(BaseHandler):
             msg = False
         
         return msg
+        
 class chart(BaseHandler):
     @tornado.web.authenticated
     def get(self,*args,**kwargs):
@@ -209,7 +210,7 @@ class posHandler(tornado.websocket.WebSocketHandler,BaseHandler):
 
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):
-        print(datetime.now().strftime("%y%m%d %H:%M:%S"),"pos.post body:", self.request.body_arguments)
+        #print(datetime.now().strftime("%y%m%d %H:%M:%S"),"pos.post body:", self.request.body_arguments)
         pos = self.request.arguments
         if pos:
             for name,val in pos.items():

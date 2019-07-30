@@ -9,13 +9,14 @@ import json
 from time import sleep,time
 from datetime import datetime
 from tornado.concurrent import run_on_executor
+import logging
 
 IMAGE = "daocloud.io/xingetouzi/vnpy-fxdayu:v1.1.20"
 class test(BaseHandler):
     #@tornado.web.authenticated
     @tornado.gen.coroutine
     def post(self,*args, **kwargs):
-        print(self.request.arguments,args)
+        logging.info(f"{self.request.arguments},{args}")
         x=self.get_argument("test")
         yield self.awake(x)
     @run_on_executor
@@ -179,7 +180,7 @@ class mainipulator(BaseHandler):
     @tornado.web.authenticated
     @tornado.gen.coroutine
     def get(self,*args,**kwargs):
-        print("mainipulator get",args, self.request.arguments, "body:", self.request.body_arguments)
+        logging.info(f"mainipulator get,{self.request.arguments},{args}, body:{self.request.body_arguments}")
         if self.get_argument("checkName", None):
             qry = filter_name(self.get_argument("checkName"))
             r = self.db_client.query_one("strategy",{"alias":qry})
@@ -222,7 +223,7 @@ class clear_pos(BaseHandler):
     @tornado.gen.coroutine
     def post(self,*args,**kwargs):
         current_user = self.get_current_user()
-        print("clearpos post",args, self.request.arguments, "body:", self.request.body_arguments)
+        logging.info(f"clearpos post,{self.request.arguments},{args}, body:{self.request.body_arguments}")
         sym,ac,direction = self.get_argument("symbol").split("_")
         qty = self.get_argument("qty")
         stg = filter_name(self.get_argument("strategy"))
@@ -258,7 +259,8 @@ class public(BaseHandler):
     @tornado.gen.coroutine
     def get(self):
         member = self.db_client.query_one("user", {"auth": self.get_cookie('auth')})
-        print("public get:",self.request.arguments, member.get("name","not member"))
+        logging.info(f"public get: {member.get('name','not member')},{self.request.arguments}, body:{self.request.body_arguments}")
+
         if member:
             if self.get_argument("strategy", None):
                 name = self.get_argument("strategy", None)

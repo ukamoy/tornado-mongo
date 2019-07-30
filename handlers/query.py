@@ -24,6 +24,7 @@ class rotate_query(object):
         self.new_pos_dict = {}
         self.key_chain = {}
         self.open_order_cache = {}
+        self.coin_values = {}
         self.mapping = {"1":"开多","2":"开空","3":"平多","4":"平空"}
         self.prepare()
 
@@ -34,7 +35,7 @@ class rotate_query(object):
         active_ac = yield self.key_maker()
         filled_orders = []
         for ex, ac in active_ac.items():
-            coins = sum(list(ac.values()),[])
+            coins = list(set(sum(list(ac.values()),[])))
                 
             if ex=="OKEX" and ac:
                 filled_orders += yield self.okex_orders(ac, coins)
@@ -46,6 +47,7 @@ class rotate_query(object):
         
         if filled_orders:
             success_order = yield self.process_filled_orders(filled_orders)
+        self.get_position_profit(self.coin_values)
         self.send_pos()
         self.dingding_pos(success_order)
 
@@ -182,13 +184,13 @@ class rotate_query(object):
         except Exception as e:
             print("client.fetch failed. reason:",e)
 
-    def get_position_profit(self, coin_value):
+    def get_position_profit(self, coin_values):
         for key, pos in self.pos_dict.items():
             strategy = key.split("-")[0]
             symbol = key.replace(f"{strategy}-","")
             if (pos[0]+pos[1]):
                 json_obj = self.db_client.query("orders", {"strategy": strategy})
-                stat = get_chart(strategy, json_obj)
+                stat = get_chart(strategy, json_obj, price_dict=coin_values)
                 info = stat["detail"][symbol]
                 long_v, short_v = info["position_profit_long"],info["position_profit_short"]
             else:
@@ -273,10 +275,9 @@ class rotate_query(object):
         open_orders = []
         contract_map, contract_reverse = OKEX.query_futures_instruments()
 
-        coin_v = {}
         for symbol in coins:
             v = OKEX.query_futures_price(contract_map[symbol])
-            coin_v.update({symbol:v})
+            self.coin_values.update({symbol:v})
         
 
         for vt_ac, symbols in active_ac.items():
@@ -291,8 +292,8 @@ class rotate_query(object):
                     open_orders += self.process_okex_orders(r["order_info"], vt_ac, symbol)
         
         self.process_open_orders(open_orders)
-        self.get_position_profit(coin_v)
         return filled_orders
+
     @run_on_executor
     def process_filled_orders(self, filled_orders):
         success_orders = []
@@ -403,6 +404,7 @@ class position_span(object):
         self.short_qty = 0
         self.position_profit_long = 0
         self.position_profit_short = 0
+        self.used_margin = 0
 
         self.profit_loss = 0
         self.fee = 0
@@ -456,10 +458,17 @@ class position_span(object):
         # 持仓盈亏
         if self.long_qty: 
             profit = ( ( self.contract_value / self.long_price - self.contract_value / price ) * self.long_qty )
-            self.position_profit_long = profit / (self.contract_value * self.long_qty / self.long_price)
+            self.position_profit += profit
+            margin = self.contract_value * self.long_qty / self.long_price / self.leverage
+            self.used_margin += margin
+            self.position_profit_long = profit / margin
         if self.short_qty:
             profit = ( ( self.contract_value / price - self.contract_value / self.short_price ) * self.short_qty )
-            self.position_profit_short = profit / (self.contract_value * self.short_qty / self.short_price / self.leverage)
+            self.position_profit += profit
+            margin = self.contract_value * self.short_qty / self.short_price / self.leverage
+            self.used_margin += margin
+            self.position_profit_short = profit / margin
+
 
 # 订单处理
 def process_orders(order_data, pos_dict):
@@ -492,7 +501,7 @@ def process_orders(order_data, pos_dict):
         pos_dict.pnl_list.append([t, pos_dict.profit_loss])
         pos_dict.qty_list.append([t, order_qty])
 
-def get_chart(strategy, json_obj, hist=[]):
+def get_chart(strategy, json_obj, hist=[], price_dict = {}):
     df = pd.DataFrame(json_obj)
     result = {}
     statistics = {}
@@ -506,28 +515,36 @@ def get_chart(strategy, json_obj, hist=[]):
         data = df.sort_values(by = "datetime", ascending = True)
         data["vtSymbol"] = data["instrument_id"] + ":" + data["account"]
         instruments = list(set(data["vtSymbol"]))
-        contract_map, contract_reverse = OKEX.query_futures_instruments()
+        if not price_dict:
+            contract_map, contract_reverse = OKEX.query_futures_instruments()
         for instrument in instruments:
             per_coin_data = data[data["vtSymbol"] == instrument]
             pos_dict = position_span(instrument)
             process_orders(per_coin_data, pos_dict)
-            symbol = contract_map[instrument.split(":")[0]]
-            pos_dict.calculate_position_profit(OKEX.query_futures_price(symbol))
+            symbol = instrument.split(":")[0]
+            if not price_dict:
+                symbol = contract_map[symbol]
+                pos_dict.calculate_position_profit(OKEX.query_futures_price(symbol))
+            else:
+                pos_dict.calculate_position_profit(price_dict[symbol])
 
             # 缓存策略统计
             result[instrument] = pos_dict
 
         for instrument, position in result.items():
+            net_profit = position.profit_loss + position.fee + position.position_profit
             statistics[instrument] = {
                 "symbol" : instrument,
                 "trade_count" : position.trade_count,
-                "profit_loss" : position.profit_loss,
-                "fee" : position.fee,
-                "position_profit_long" : f"{position.position_profit_long: 0.2%}" if position.position_profit_long else 0,
-                "position_profit_short" : f"{position.position_profit_short: 0.2%}" if position.position_profit_short else 0,
-                "net_profit" : position.profit_loss + position.fee + position.position_profit_long + position.position_profit_short,
+                "profit_loss" : f"{position.profit_loss:0.4f}",
+                "fee" : f"{position.fee:0.4f}",
+                "position_profit" : f"{position.position_profit:0.4f}" if position.position_profit else 0,
+                "net_profit" : f"{net_profit:0.4f}",
                 "holding_long" : position.long_qty,
                 "holding_short" : position.short_qty,
+                "used_margin": f"{position.used_margin:0.4f}",
+                "position_profit_long" : f"{position.position_profit_long: 0.2%}" if position.position_profit_long else 0,
+                "position_profit_short" : f"{position.position_profit_short: 0.2%}" if position.position_profit_short else 0,
                 "missing_open" : position.missing_open,
                 "pnl": position.pnl_list,
                 "qty":position.qty_list

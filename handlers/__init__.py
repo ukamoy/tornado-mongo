@@ -2,6 +2,7 @@ import tornado
 from dayu.db_conn import db_client
 from dayu.user import Member
 from datetime import datetime
+import logging
 
 class BaseHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
@@ -61,5 +62,5 @@ class BaseHandler(tornado.web.RequestHandler):
             "verified" : db.get('verified', ""),
             "contacter" : db.get('contacter', ""),
             }
-        print(f"{datetime.now().strftime('%y%m%d %H:%M:%S')}: {self.user['name']},{self.request.remote_ip},{self.request.uri}")
+        logging.info(f"{self.user['name']},{self.request.uri},{self.request.remote_ip}")
         return self.user

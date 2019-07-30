@@ -565,7 +565,8 @@ function account_value(hist,coin,){
         },
         yAxis: {
             type: 'value',
-            boundaryGap: [0, '100%']
+            boundaryGap: [0, '100%'],
+            scale:true,
         },
         dataZoom: [{
             type: 'inside',
