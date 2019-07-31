@@ -257,24 +257,25 @@ class clear_pos(BaseHandler):
 
 class public(BaseHandler):
     @tornado.gen.coroutine
-    def get(self):
+    def prepare(self):
         member = self.db_client.query_one("user", {"auth": self.get_cookie('auth')})
-        logging.info(f"public get: {member.get('name','not member')},{self.request.arguments}, body:{self.request.body_arguments}")
+        logging.info(f"public prepare: {member.get('name','not member')},{self.request.arguments}, body:{self.request.body_arguments}")
 
-        if member:
-            if self.get_argument("strategy", None):
-                name = self.get_argument("strategy", None)
-                qry = {} if name =="all" else {"name":name} 
-                r = self.db_client.query("strategy",qry, projection={"_id":0})
-                self.finish(json.dumps(r))
-            if self.get_argument("ding", None):
-                name = self.get_argument("ding", None)
-                qry = {} if name =="all" else {"name":name} 
-                r = self.db_client.query("ding",qry, projection={"_id":0})
-                self.finish(json.dumps(r))
-        else:
+        if not member:
             raise tornado.web.HTTPError(403)
 
+    @tornado.gen.coroutine
+    def get(self):
+        if self.get_argument("strategy", None):
+            name = self.get_argument("strategy", None)
+            qry = {} if name =="all" else {"name":name} 
+            r = self.db_client.query("strategy",qry, projection={"_id":0})
+            self.finish(json.dumps(r))
+        if self.get_argument("ding", None):
+            name = self.get_argument("ding", None)
+            qry = {} if name =="all" else {"name":name} 
+            r = self.db_client.query("ding",qry, projection={"_id":0})
+            self.finish(json.dumps(r))
 
 handlers = [
     (r"/operator", operator),

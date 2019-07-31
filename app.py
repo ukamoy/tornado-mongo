@@ -5,12 +5,12 @@ import os
 import urls
 from handlers.query import rotate_query
 
-options.log_file_prefix = os.path.join(os.path.dirname(__file__),"logs/tornado.log")
+options.log_file_prefix = os.path.join(os.path.dirname(__file__), "logs/tornado.log")
 options.logging = "debug"
 options.log_rotate_mode = "time"
 options.log_rotate_when = "D"
 options.log_to_stderr = True
-options.log_file_num_backups = 5
+# options.log_file_num_backups = 5
 settings = {
     "static_path": os.path.join(os.path.dirname(__file__), "static"),
     'template_path':os.path.join(os.path.dirname(__file__), "templates"),
