@@ -279,15 +279,14 @@ class rotate_query(object):
             v = OKEX.query_futures_price(contract_map[symbol])
             self.coin_values.update({symbol:v})
         
-
         for vt_ac, symbols in active_ac.items():
             gateway = OKEX(self.key_chain[vt_ac])
             for symbol in list(symbols):
-                for state in ["-1", "2"]:
+                for state in ["Canceled", "Filled"]:
                     r = gateway.query_futures_orders(contract_map[symbol],state)
                     if r.get("result", False):
                         filled_orders += self.process_okex_orders(r["order_info"], vt_ac, symbol)
-                r = gateway.query_futures_orders(contract_map[symbol], "6")
+                r = gateway.query_futures_orders(contract_map[symbol], "New")
                 if r.get("result", False):
                     open_orders += self.process_okex_orders(r["order_info"], vt_ac, symbol)
         
