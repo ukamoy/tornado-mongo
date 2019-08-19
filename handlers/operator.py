@@ -100,7 +100,7 @@ class operator(BaseHandler):
             if method == "archive":
                 return self.finish(json.dumps({"result":f"{stg_name}-latest.tar"}))
             return self.finish(json.dumps({"error":"server not exists"}))
-
+        dingding("OPERATOR", f"* OPERATION {method} for {stg_name}: {res}")
         self.finish(json.dumps({"result":res}))
 
     def archive(self, server, strategy, path):

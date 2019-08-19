@@ -139,6 +139,7 @@ class OKEX(object):
         path = f"{path}?{urlencode(params)}" if method == "GET" and params else path
         timestamp = f"{datetime.utcnow().isoformat()[:-3]}Z"
         msg = f"{timestamp}{method}{path}{body}"
+        print(msg)
         mac = hmac.new(self.secretkey, 
             bytes(msg, encoding = 'utf-8'), 
             digestmod = 'sha256').digest()
@@ -171,8 +172,21 @@ class OKEX(object):
         url, headers = self.okex_sign("GET", path)
         r = requests.get(url, headers = headers, timeout = 10)
         return r.json()
+    def query_futures_leverage(self,symbol):
+        path= f'/api/futures/v3/accounts/{symbol}/leverage'
+        url, headers = self.okex_sign("GET", path)
+        r = requests.get(url, headers = headers, timeout = 10)
+        return r.json()
 
-    def query_position(self, symbol):
+    def set_futures_leverage(self,symbol,value):
+        path= f'/api/futures/v3/accounts/{str.lower(symbol)}/leverage'
+        params = {"leverage": value}
+        url, headers = self.okex_sign("POST", path, params)
+        print(url, headers)
+        r = requests.post(url, headers = headers, data = json.dumps(params), timeout = 10)
+        return r.json()
+
+    def query_futures_position(self, symbol):
         path = f'/api/futures/v3/{symbol}/position'
         url, headers = self.okex_sign("GET", path)
         r = requests.get(url, headers = headers, timeout = 10)
@@ -188,14 +202,14 @@ class OKEX(object):
             "match_price": "0",
             "leverage": self.future_leverage}
         url, headers = self.okex_sign("POST", path, params)
-        r = requests.post(url, headers = headers, data = params, timeout = 10)
+        r = requests.post(url, headers = headers, data = json.dumps(params), timeout = 10)
         return r.json()
 
     def cancel_futures_order(self, symbol, oid):
         path = f'/api/futures/v3/cancel_order/{symbol}/{oid}'
         params = {"client_oid": oid, "instrument_id": symbol}
         url, headers = self.okex_sign("POST", path, params)
-        r = requests.post(url, headers = headers, data = params, timeout = 10)
+        r = requests.post(url, headers = headers, data = json.dumps(params), timeout = 10)
         return r.json()
 
 class HUOBI(object):

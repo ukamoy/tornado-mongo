@@ -101,7 +101,7 @@ class rotate_query(object):
                 serv=None
                 for serv_r in list(set(sorted(running_serv))):
                     print("find existing:", instance["strategy"], serv_r, running_serv.count(serv_r))
-                    if running_serv.count(serv_r) < 7:
+                    if running_serv.count(serv_r) < 8:
                         serv = serv_r
                         running_serv.append(serv)
                         break
@@ -120,7 +120,7 @@ class rotate_query(object):
     @run_on_executor
     def launch_process(self, server_name, strategy, task_id):
         server = get_server(server_name)
-        msg = f"create container @ {server_name} for {strategy}\n\n"
+        msg = f"- create container @ {server_name} for {strategy}\n\n"
         if server:
             container = server.get(strategy)
             if not container:
@@ -128,7 +128,7 @@ class rotate_query(object):
                     IMAGE, # 镜像名
                     strategy, # 策略名
                     f"{working_path}/{task_id}/{strategy}")
-                msg += f"result: {r}, "
+                msg += f"> result: {r}, "
                 
             status = server.start(strategy)
             if status == "running":
