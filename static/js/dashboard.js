@@ -537,8 +537,9 @@ function account_value(hist,coin,){
         tooltip: {
             trigger: 'axis',
             position: function (pt) {
-                return [pt[0], '10%'];
-            }
+                return [pt[0], '50%'];
+            },
+            confine:true
         },
         title: {
             left: 'center',
@@ -591,11 +592,11 @@ function account_value(hist,coin,){
                 type:'line',
                 color:'#00BFFF',
                 smooth:true,
-                markLine: {
-                    data: [
-                        {type: 'average', name: '平均值'}
-                    ]
-                },
+                // markLine: {
+                //     data: [
+                //         {type: 'average', name: '平均值'}
+                //     ]
+                // },
                 markPoint: {
                     symbol:"pin",
                     data: [

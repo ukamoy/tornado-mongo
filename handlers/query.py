@@ -62,6 +62,7 @@ class rotate_query(object):
                 self.pos_dict.update({f"{stg['alias']}-{sym}":pos})
         
         active_ac = {"OKEX": {}, "BITMEX": {}}
+        # symbols.add("EOS-QUARTER:OKEX_hashingbot")
         for symbol in list(symbols):
             sym, vt_ac = symbol.split(":")
             ex, ac = vt_ac.split("_")

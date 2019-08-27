@@ -84,8 +84,8 @@ class account(BaseHandler):
         for k in list(set(coins)):
             prices = self.db_client.query("coin_value",{"coin":k})
             p={d["date"]:d["value"] for d in prices}
-            usdt_dict = {d[0]:d[1][k]*p[d[0]]+usdt_dict.get(d[0],0) for d in b}
-            coin_dict[k] = list(map(lambda x: [x[0],x[1][k]], b))
+            usdt_dict = {d[0]:d[1].get(k,0)*p.get(d[0],0)+usdt_dict.get(d[0],0) for d in b}
+            coin_dict[k] = list(map(lambda x: [x[0],x[1].get(k,0)], b))
         coin_dict.update({"USDT-equivalent":[[k,v] for k,v in usdt_dict.items()]})
         self.finish(json.dumps(coin_dict))
 
