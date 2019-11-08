@@ -10,7 +10,7 @@ from datetime import datetime
 import time
 
 OKEX_BASE_URL = "https://www.okex.com"
-BITMEX_BASE_URL = "https://testnet.bitmex.com/api/v1"
+BITMEX_BASE_URL = "https://www.bitmex.com/api/v1"
 HUOBI_SPOT_URL = "api.huobi.pro"
 HUOBI_FUTURES_URL = "api.hbdm.com"
 BINANCE_BASE_URL = "https://api.binance.com"
@@ -116,6 +116,8 @@ class OKEX(object):
         r = requests.get(f"{OKEX_BASE_URL}/api/futures/v3/instruments").json()
         contract_map = {}
         for contract in r:
+            if contract["quote_currency"] == "USDT":
+                continue
             vert = f"{contract['underlying_index']}-{contract['alias'].replace('_','-')}"
             contract_map[str.upper(vert)] = contract["instrument_id"]
             contract_reverse = {v:k for k,v in contract_map.items()}
@@ -150,12 +152,20 @@ class OKEX(object):
             'OK-ACCESS-SIGN': base64.b64encode(mac),
             'OK-ACCESS-TIMESTAMP': timestamp,
             'OK-ACCESS-PASSPHRASE': self.passphrase }
+    def query_wallet(self):
+        path = "/api/futures/v3/accounts/btc"
+        url, headers = self.okex_sign("GET", path)
+        r = requests.get(url, headers = headers, timeout = 10)
+        print(r.json())
 
     # private query -------------------------------
     def query_futures_orders(self, symbol, state):
         path = f'/api/futures/v3/orders/{symbol}'
         state_map = {"New": "0", "Filled": "2", "Canceled": "-1", "Partially filled": "1", "Rejected": "-2"}
         params = {"state": state_map.get(state, state), "instrument_id": symbol, "limit": 100}
+        # params["after"] = "3712845163926528"
+        # params["before"] = "3712845163926529"
+
         url, headers = self.okex_sign("GET", path, params)
         r = requests.get(url, headers = headers, timeout = 10)
         return r.json()
@@ -182,7 +192,13 @@ class OKEX(object):
         path= f'/api/futures/v3/accounts/{str.lower(symbol)}/leverage'
         params = {"leverage": value}
         url, headers = self.okex_sign("POST", path, params)
-        print(url, headers)
+        r = requests.post(url, headers = headers, data = json.dumps(params), timeout = 10)
+        return r.json()
+        
+    def set_account_type(self,symbol):
+        path = f'/api/futures/v3/accounts/margin_mode'
+        params = {"margin_mode": "crossed","currency":str.lower(symbol)}
+        url, headers = self.okex_sign("POST", path,params)
         r = requests.post(url, headers = headers, data = json.dumps(params), timeout = 10)
         return r.json()
 

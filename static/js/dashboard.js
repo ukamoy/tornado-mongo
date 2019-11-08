@@ -47,7 +47,7 @@ function check_submission(){
 function remove_row(obj){
 	var tr = obj.parentNode.parentNode;
     var tds = $(tr).find("td");
-	$.post("/ding?delete="+obj.name);
+	$.post("/panel/ding?delete="+obj.name);
 	tr.parentNode.removeChild(tr);
 }
 function process_task(obj){

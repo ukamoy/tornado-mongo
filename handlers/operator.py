@@ -11,7 +11,7 @@ from datetime import datetime
 from tornado.concurrent import run_on_executor
 import logging
 
-IMAGE = "daocloud.io/xingetouzi/vnpy-fxdayu:v1.1.20"
+IMAGE = "xingehub/vnpy_fxdayu:latest"
 class test(BaseHandler):
     #@tornado.web.authenticated
     @tornado.gen.coroutine
@@ -61,8 +61,14 @@ class operator(BaseHandler):
                             else:
                                 return self.finish(json.dumps({"error":"operation halt failed"}))
                         else:
-                            return self.finish(json.dumps({"error":"container not running"}))
+                            self.db_client.update_one("strategy",{"name":stg_name},{"server":"idle"})
+                            self.db_client.insert_one("operation",{"name":stg_name,"op":0,"timestamp":now})
+                            self.db_client.update_one("tasks",{"strategy":stg_name,"task_id":task_id},{"status":0})
+                            return self.finish(json.dumps({"error":"container not running, you can delete it"}))
                     else:
+                        self.db_client.update_one("strategy",{"name":stg_name},{"server":"idle"})
+                        self.db_client.insert_one("operation",{"name":stg_name,"op":0,"timestamp":now})
+                        self.db_client.update_one("tasks",{"strategy":stg_name,"task_id":task_id},{"status":-1})
                         return self.finish(json.dumps({"error":"container not exists"}))
                 elif method == "delete":
                     if container:
@@ -74,6 +80,10 @@ class operator(BaseHandler):
                                 res = True
                                 self.db_client.update_one("tasks",{"strategy":stg_name,"task_id":task_id},{"status":-1})
                     else:
+                        self.db_client.update_one("strategy",{"name":stg_name},{"server":"idle"})
+                        self.db_client.insert_one("operation",{"name":stg_name,"op":0,"timestamp":now})
+                        self.db_client.update_one("tasks",{"strategy":stg_name,"task_id":task_id},{"status":-1})
+                        
                         return self.finish(json.dumps({"error":"container not exists"}))
                         
                 elif method == "launch":
@@ -237,9 +247,16 @@ class clear_pos(BaseHandler):
         if open_orders.get("result",False):
             orders = open_orders["order_info"]
             need_to_cancel = list(map(lambda x:x["client_oid"] if x["client_oid"].split("FUTU")[0]==stg else None, open_orders["order_info"]))
+        need_to_cancel=list(set(need_to_cancel))
         len_cancel_order = len(need_to_cancel)
-        for oid in list(set(need_to_cancel)):
+        print(need_to_cancel)
+        for oid in list(need_to_cancel):
+            if not oid:
+                need_to_cancel.remove(None)
+                continue
+
             r = gateway.cancel_futures_order(instrument, oid)
+            print(r)
             if r.get("result", False):
                 need_to_cancel.remove(oid)
         if len(need_to_cancel)>0:

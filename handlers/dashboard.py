@@ -190,6 +190,7 @@ class orders(BaseHandler):
             r = gateway.query_futures_orders(symbol, self.get_argument("state"))
         
         if r:
+            print(r)
             if r.get("result", None):
                 result=list(map(lambda x:dict(x, **{"datetime":convertDatetime(x["timestamp"])}),r["order_info"]))
             else:

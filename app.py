@@ -15,6 +15,7 @@ settings = {
     "static_path": os.path.join(os.path.dirname(__file__), "static"),
     'template_path':os.path.join(os.path.dirname(__file__), "templates"),
     "login_url":"/",
+    "debug":True
 }
 
 application = tornado.web.Application(urls.handlers, **settings)

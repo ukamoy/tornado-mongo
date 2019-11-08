@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block body %}
 {% if data %}
-<a href="/ding?method=new" class="btn btn-sm btn-primary">New Ding Token</a>
+<a href="/panel/ding?method=new" class="btn btn-sm btn-primary">New Ding Token</a>
 <div class="table-responsive" style="margin-top: 10px">
     <table cellpadding="0" cellspacing="0" border="0" class="table-1" id="strategy_list">
         <thead>
@@ -14,7 +14,7 @@
         <tbody>
             {% for d in data %}
             <tr class="odd gradeX">
-                <td data-label="Name"><a href="/ding?name={{d['name']}}">{{d["name"]}}</a></td>
+                <td data-label="Name"><a href="/panel/ding?name={{d['name']}}">{{d["name"]}}</a></td>
                 <td data-label="Token">{{d["token"]}}</td>
                 <td data-label="Operator"><a class="btn btn-sm btn-danger" href="javascript:;" onclick = "remove_row(this)" name="{{d['name']}}">del</a></td>
             </tr>
@@ -25,7 +25,7 @@
 
 {%else%}
 <div style="margin-top: 10px">
-    <form action="/ding?method=new" method="post"  class="form-signin">
+    <form action="/panel/ding?method=new" method="post"  class="form-signin">
     <p>
         {%if edit%}
         <input type="hidden" name = "old_name" value="{{edit['name']}}">

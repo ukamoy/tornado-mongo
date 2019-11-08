@@ -14,8 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 from config import working_path
 
-#IMAGE = "daocloud.io/xingetouzi/vnpy-fxdayu:v1.1.20"
-IMAGE = "daocloud.io/xingetouzi/vnpy-fxdayu:v1.1.21-20190729"
+IMAGE = "xingehub/vnpy_fxdayu:latest"
 class rotate_query(object):
     executor = ThreadPoolExecutor(15)
     def __init__(self):
@@ -47,9 +46,9 @@ class rotate_query(object):
         
         if filled_orders:
             success_order = yield self.process_filled_orders(filled_orders)
-        self.get_position_profit(self.coin_values)
-        self.send_pos()
-        self.dingding_pos(success_order)
+            self.get_position_profit(self.coin_values)
+            self.send_pos()
+            self.dingding_pos(success_order)
 
     @run_on_executor
     def key_maker(self):
@@ -62,7 +61,8 @@ class rotate_query(object):
                 self.pos_dict.update({f"{stg['alias']}-{sym}":pos})
         
         active_ac = {"OKEX": {}, "BITMEX": {}}
-        # symbols.add("EOS-QUARTER:OKEX_hashingbot")
+        # symbols.add("BTC-QUARTER:OKEX_hashingbot")
+        # symbols.add("BTC-QUARTER:OKEX_CTAtest01")
         for symbol in list(symbols):
             sym, vt_ac = symbol.split(":")
             ex, ac = vt_ac.split("_")
@@ -102,7 +102,7 @@ class rotate_query(object):
                 serv=None
                 for serv_r in list(set(sorted(running_serv))):
                     print("find existing:", instance["strategy"], serv_r, running_serv.count(serv_r))
-                    if running_serv.count(serv_r) < 8:
+                    if running_serv.count(serv_r) < 24:
                         serv = serv_r
                         running_serv.append(serv)
                         break
@@ -116,6 +116,7 @@ class rotate_query(object):
                         dingding("INSTANCE", "> Auto-launch failed, NEED NEW SERVER")
                         break
                 msg += yield self.launch_process(serv, instance["strategy"], instance["task_id"])
+                break
             dingding("AUTO-LAUNCHER", msg)
 
     @run_on_executor
@@ -290,7 +291,6 @@ class rotate_query(object):
                 r = gateway.query_futures_orders(contract_map[symbol], "New")
                 if r.get("result", False):
                     open_orders += self.process_okex_orders(r["order_info"], vt_ac, symbol)
-        
         self.process_open_orders(open_orders)
         return filled_orders
 
@@ -488,13 +488,13 @@ def process_orders(order_data, pos_dict):
         
         elif str(order['type']) == "3":
             if pos_dict.long_qty < order_qty:
-                pos_dict.missing_open.append(f"{order['datetime']}, hold_long:{pos_dict.long_qty} vs. sell_qty:{order_qty}")
+                pos_dict.missing_open.append(f"{order['datetime']}, hold_long:{pos_dict.long_qty} vs. sell_qty:{order_qty}, ID:{order['order_id']}")
                 continue
             pos_dict.sell_long_holding(order_price, order_qty)
         
         elif str(order['type']) == "4":
             if pos_dict.short_qty < order_qty:
-                pos_dict.missing_open.append(f"{order['datetime']}, hold_short:{pos_dict.short_qty} vs. cover_qty:{order_qty}")
+                pos_dict.missing_open.append(f"{order['datetime']}, hold_short:{pos_dict.short_qty} vs. cover_qty:{order_qty}, ID:{order['order_id']}")
                 continue
             pos_dict.cover_short_holding(order_price, order_qty)
         t= int(order['datetime'].timestamp()*1000)
@@ -512,7 +512,7 @@ def get_chart(strategy, json_obj, hist=[], price_dict = {}):
     total_pnl = 0
     if df.size > 0:
         del df["_id"]
-        data = df.sort_values(by = "datetime", ascending = True)
+        data = df.sort_values(by = "order_id", ascending = True)
         data["vtSymbol"] = data["instrument_id"] + ":" + data["account"]
         instruments = list(set(data["vtSymbol"]))
         if not price_dict:

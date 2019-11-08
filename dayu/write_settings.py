@@ -83,7 +83,8 @@ def prepare_stg_files(data, task_id, key_chain):
             setting["STATUS_NOTIFY_PERIOD"] = 3600
             setting["STATUS_NOTIFY_SHIFT"] = 60 * random.randint(1,40)
             setting["ENABLE_STATUS_NOTICE"] = True
-            setting["author"] = stg["Author"]
+            if not setting.get("author",None):
+                setting["author"] = stg["Author"]
 
             json.dump([setting], f, indent = 4)
 

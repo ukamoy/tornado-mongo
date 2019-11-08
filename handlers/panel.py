@@ -112,7 +112,7 @@ class ding_info(BaseHandler):
                 "token":self.get_argument("ding_token",None)
                 }
             self.db_client.update_one("ding",{"name":old_name},qry)
-        self.redirect("/ding?method=all")
+        self.redirect("/panel/ding?method=all")
 
 
 handlers = [
