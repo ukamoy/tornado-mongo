@@ -295,11 +295,14 @@ class rotate_query(object):
         self.process_open_orders(open_orders)
 
         for oid, info in list(self.open_order_store.items()):
+            order = {}
             try:
-                w, strategy,symbol,account = info.split("-")
+                w, strategy,coin,quote,period,account = info.split("-")
+                symbol=f"{coin}-{quote}-{period}"
+                order = gateway.query_futures_monoOrder(contract_map[symbol], oid)
             except:
                 self.open_order_store.pop(oid, None) 
-            order = gateway.query_futures_monoOrder(contract_map[symbol], oid)
+            
             status = order.get("state","")
             if status in ["-1","-2"]:
                 self.open_order_store.pop(oid, None)
