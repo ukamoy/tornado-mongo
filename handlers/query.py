@@ -23,7 +23,7 @@ class rotate_query(object):
         self.new_pos_dict = {}
         self.key_chain = {}
         self.open_order_cache = {}
-        self.open_oreder_store = {}
+        self.open_order_store = {}
         self.coin_values = {}
         self.mapping = {"1":"开多","2":"开空","3":"平多","4":"平空"}
         self.prepare()
@@ -293,6 +293,19 @@ class rotate_query(object):
                 if r.get("result", False):
                     open_orders += self.process_okex_orders(r["order_info"], vt_ac, symbol)
         self.process_open_orders(open_orders)
+
+        for oid, info in list(self.open_order_store.items()):
+            try:
+                w, strategy,symbol,account = info.split("-")
+            except:
+                self.open_order_store.pop(oid, None) 
+            order = gateway.query_futures_monoOrder(contract_map[symbol], oid)
+            status = order.get("state","")
+            if status in ["-1","-2"]:
+                self.open_order_store.pop(oid, None)
+            elif status == "2":
+                filled_orders.append(order)
+
         return filled_orders
 
     @run_on_executor
@@ -318,6 +331,7 @@ class rotate_query(object):
                 key = f"open-{order['strategy']}-{order['instrument_id']}:{order['account']}"
                 qty = open_order_map.get(key, 0)
                 open_order_map.update({key: (qty + int(order["size"]))})
+                self.open_order_store.update({order['order_id']:key})
 
             if open_order_map != self.open_order_cache:
                 self.open_order_cache, pre = open_order_map, self.open_order_cache
