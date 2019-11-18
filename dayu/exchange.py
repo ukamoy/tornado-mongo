@@ -141,7 +141,6 @@ class OKEX(object):
         path = f"{path}?{urlencode(params)}" if method == "GET" and params else path
         timestamp = f"{datetime.utcnow().isoformat()[:-3]}Z"
         msg = f"{timestamp}{method}{path}{body}"
-        print(msg)
         mac = hmac.new(self.secretkey, 
             bytes(msg, encoding = 'utf-8'), 
             digestmod = 'sha256').digest()
@@ -163,8 +162,8 @@ class OKEX(object):
         path = f'/api/futures/v3/orders/{symbol}'
         state_map = {"New": "0", "Filled": "2", "Canceled": "-1", "Partially filled": "1", "Rejected": "-2"}
         params = {"state": state_map.get(state, state), "instrument_id": symbol, "limit": 100}
-        # params["after"] = "3712845163926528"
-        # params["before"] = "3712845163926529"
+        # params["after"] = "3874648302828545"
+        # params["before"] = "3874648302828545"
 
         url, headers = self.okex_sign("GET", path, params)
         r = requests.get(url, headers = headers, timeout = 10)

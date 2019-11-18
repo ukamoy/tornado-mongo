@@ -23,6 +23,7 @@ class rotate_query(object):
         self.new_pos_dict = {}
         self.key_chain = {}
         self.open_order_cache = {}
+        self.open_oreder_store = {}
         self.coin_values = {}
         self.mapping = {"1":"开多","2":"开空","3":"平多","4":"平空"}
         self.prepare()

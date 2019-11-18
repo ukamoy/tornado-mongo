@@ -76,9 +76,9 @@ class operator(BaseHandler):
                             return self.finish(json.dumps({"error":"you should halt container in advance"}))
                         else:
                             r = server.remove(stg_name)
-                            if not r:
-                                res = True
-                                self.db_client.update_one("tasks",{"strategy":stg_name,"task_id":task_id},{"status":-1})
+                            self.db_client.update_one("tasks",{"strategy":stg_name,"task_id":task_id},{"status":-1})
+                            self.db_client.update_one("strategy",{"name":stg_name},{"server":"idle"})
+                            self.db_client.insert_one("operation",{"name":stg_name,"op":0,"timestamp":now})
                     else:
                         self.db_client.update_one("strategy",{"name":stg_name},{"server":"idle"})
                         self.db_client.insert_one("operation",{"name":stg_name,"op":0,"timestamp":now})
